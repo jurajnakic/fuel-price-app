@@ -58,7 +58,7 @@ Updated settings screen with new sections:
 
 #### Regulatory Info
 - **Current regulation** — name, NN reference, effective date
-  - e.g., "Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata — NN 78/2024"
+  - e.g., "Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata — NN 31/2025"
 - **Link to Narodne novine** — opens in browser
 - **Last parameter update** — date when remote config was last fetched
 
@@ -76,28 +76,40 @@ A JSON file hosted on GitHub (project repository) for updating regulatory parame
 **Contents:**
 ```json
 {
-  "version": "2024-07-15",
-  "regulation": {
+  "version": "2025-02-26",
+  "price_regulation": {
     "name": "Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata",
-    "nn_reference": "NN 78/2024",
-    "effective_date": "2024-07-15",
-    "nn_url": "https://narodne-novine.nn.hr/clanci/sluzbeni/2024_07_78_1234.html"
+    "nn_reference": "NN 31/2025",
+    "effective_date": "2025-02-26",
+    "nn_url": "https://narodne-novine.nn.hr/clanci/sluzbeni/full/2025_02_31_326.html"
+  },
+  "excise_regulation": {
+    "name": "Uredba o visini trošarine na energente i električnu energiju",
+    "nn_reference": "NN 156/2022 (konsolidirana)",
+    "note": "Vlada periodički mijenja visinu trošarine zasebnim uredbama"
+  },
+  "premiums": {
+    "es95": 0.1545,
+    "es100": 0.1545,
+    "eurodizel": 0.1545,
+    "unp_10kg": 0.8429
   },
   "excise_duties": {
-    "es95": 0.3318,
-    "es100": 0.3318,
-    "eurodizel": 0.3318,
-    "unp_10kg": 0.0000
+    "es95": 0.4560,
+    "es100": 0.4560,
+    "eurodizel": 0.40613,
+    "unp_10kg": 0.01327
   },
-  "biofuel_fee": {
-    "es95": 0.0060,
-    "es100": 0.0060,
-    "eurodizel": 0.0060,
-    "unp_10kg": 0.0000
+  "density": {
+    "es95": 0.755,
+    "es100": 0.755,
+    "eurodizel": 0.845
   },
   "vat_rate": 0.25
 }
 ```
+
+**Note on excise duties:** The excise rates (trošarina) are set by a separate regulation ("Uredba o visini trošarine na energente i električnu energiju") and change periodically by government decree. The values above are the standard rates before any temporary government intervention. Current rates: benzin 456,00 EUR/1000L, dizel 406,13 EUR/1000L, UNP 13,27 EUR/1000kg.
 
 **Behavior:**
 - Fetched once daily (alongside 16:00 CET price data fetch)
@@ -152,7 +164,7 @@ The following remain as previously designed:
 - **Fuel types:** Eurosuper 95, Eurosuper 100, Eurodizel, UNP boca 10kg
 - **Tech stack:** Flutter, Bloc/Cubit, fl_chart, sqflite, dio/http
 - **Architecture:** On-device, no backend server
-- **Formula:** Platts CIF Med proxy (Brent BZ=F, RBOB RB=F, HO=F) from Yahoo Finance, HNB EUR/USD rate, 14 working-day average, excise duties, biofuel fee, 25% VAT
+- **Formula (per NN 31/2025):** PC = [(Σ CIF Med M × ρ ÷ T) ÷ n] + P; retail = PC + trošarina + PDV 25%. CIF Med from Platts (proxy: Yahoo Finance BZ=F, RB=F, HO=F), HNB EUR/USD rate, 14-day average. Biofuel fee is NOT part of the regulated price formula.
 - **Data fetch:** Daily at 16:00 CET, hourly retry on failure, pull-to-refresh
 - **Offline:** Cached data from SQLite
 - **SQLite tables:** oil_prices, exchange_rates, predicted_prices, actual_prices
