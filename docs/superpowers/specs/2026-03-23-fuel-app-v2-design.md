@@ -132,7 +132,7 @@ Local notifications to remind user before Tuesday price changes.
 - On/off toggle
 
 **Notification content:**
-- Title: "Promjena cijene goriva sutra" (or "Promjena cijene goriva u utorak")
+- Title: "Promjena cijene goriva sutra" if notification is on Monday, "Promjena cijene goriva u utorak" if Saturday or Sunday
 - Body: one line per selected fuel with predicted price and direction arrow
   - e.g., "Eurodizel: 1,38 € ↓ | ES95: 1,42 € ↑"
   - ↑ = price increase vs. current, ↓ = decrease, no arrow if unchanged
