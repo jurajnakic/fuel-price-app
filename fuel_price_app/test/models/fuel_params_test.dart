@@ -85,6 +85,33 @@ void main() {
       };
       final params = FuelParams.fromJson(json);
       expect(params.cycleDays, 14);
+      expect(params.referenceDate, '2026-03-24');
+    });
+
+    test('fromJson falls back to default when referenceDate is invalid', () {
+      final json = {
+        'version': '2025-02-26',
+        'price_cycle': {
+          'reference_date': 'not-a-date',
+          'cycle_days': 14,
+        },
+        'price_regulation': {
+          'name': 'Test',
+          'nn_reference': 'NN 1/2025',
+          'effective_date': '2025-01-01',
+        },
+        'excise_regulation': {
+          'name': 'Test Excise',
+          'nn_reference': 'NN 2/2025',
+          'effective_date': '2025-01-01',
+        },
+        'premiums': {'es95': 0.1},
+        'excise_duties': {'es95': 0.4},
+        'density': {'es95': 0.755},
+        'vat_rate': 0.25,
+      };
+      final params = FuelParams.fromJson(json);
+      expect(params.referenceDate, '2026-03-24');
     });
   });
 }

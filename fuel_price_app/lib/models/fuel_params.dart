@@ -47,8 +47,16 @@ class FuelParams {
 
   factory FuelParams.fromJson(Map<String, dynamic> json) {
     final priceCycle = json['price_cycle'] as Map<String, dynamic>?;
-    final String referenceDate =
+    final rawReferenceDate =
         (priceCycle?['reference_date'] as String?) ?? '2026-03-24';
+    // Validate date format; fall back to default on parse failure
+    String referenceDate;
+    try {
+      DateTime.parse(rawReferenceDate);
+      referenceDate = rawReferenceDate;
+    } on FormatException {
+      referenceDate = '2026-03-24';
+    }
     final int rawCycleDays = (priceCycle?['cycle_days'] as num?)?.toInt() ?? 14;
     final int cycleDays =
         (rawCycleDays > 0 && rawCycleDays % 7 == 0) ? rawCycleDays : 14;
