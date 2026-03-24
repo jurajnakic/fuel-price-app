@@ -38,7 +38,7 @@ dependencies:
   fl_chart: ^0.70.0
   flutter_local_notifications: ^18.0.0
   timezone: ^0.10.0
-  workmanager: ^0.5.2
+  workmanager: ^0.6.0
   shared_preferences: ^2.3.0
   intl: ^0.19.0
   url_launcher: ^6.3.0
@@ -51,6 +51,15 @@ dev_dependencies:
   mocktail: ^1.0.4
   flutter_lints: ^5.0.0
   sqflite_common_ffi: ^2.3.0
+  flutter_launcher_icons: ^0.14.4
+  image: ^4.8.0
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/app_icon.png"
+  adaptive_icon_background: "#1565C0"
+  adaptive_icon_foreground: "assets/app_icon_foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
