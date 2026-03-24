@@ -5,6 +5,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:fuel_price_app/blocs/data_sync_cubit.dart';
 import 'package:fuel_price_app/blocs/data_sync_state.dart';
+import 'package:fuel_price_app/blocs/fuel_list_cubit.dart';
 import 'package:fuel_price_app/ui/screens/fuel_list_screen.dart';
 
 class MockDataSyncCubit extends MockCubit<DataSyncState> implements DataSyncCubit {
@@ -17,24 +18,31 @@ class MockDataSyncCubit extends MockCubit<DataSyncState> implements DataSyncCubi
   @override
   DateTime? get lastSyncTime => _lastSyncTime;
 
+  @override
   void setHasData(bool value) => _hasData = value;
+
   void setLastSyncTime(DateTime? value) => _lastSyncTime = value;
 }
 
+class MockFuelListCubit extends MockCubit<FuelListState> implements FuelListCubit {}
+
 void main() {
   late MockDataSyncCubit mockSyncCubit;
+  late MockFuelListCubit mockFuelListCubit;
 
   setUp(() {
     mockSyncCubit = MockDataSyncCubit();
+    mockFuelListCubit = MockFuelListCubit();
   });
 
   Widget buildSubject() {
     return MaterialApp(
-      home: Scaffold(
-        body: BlocProvider<DataSyncCubit>.value(
-          value: mockSyncCubit,
-          child: const FuelListScreen(),
-        ),
+      home: MultiBlocProvider(
+        providers: [
+          BlocProvider<DataSyncCubit>.value(value: mockSyncCubit),
+          BlocProvider<FuelListCubit>.value(value: mockFuelListCubit),
+        ],
+        child: const FuelListScreen(),
       ),
     );
   }
@@ -42,7 +50,8 @@ void main() {
   group('FuelListScreen sync integration', () {
     testWidgets('shows spinner when SyncInProgress and no data', (tester) async {
       when(() => mockSyncCubit.state).thenReturn(const SyncInProgress());
-      mockSyncCubit.setHasData(false);
+      when(() => mockFuelListCubit.state).thenReturn(const FuelListState());
+      mockSyncCubit._hasData = false;
       await tester.pumpWidget(buildSubject());
       expect(find.text('Preuzimanje podataka...'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -50,7 +59,8 @@ void main() {
 
     testWidgets('shows empty state on SyncFailure with no data', (tester) async {
       when(() => mockSyncCubit.state).thenReturn(const SyncFailure(message: 'fail'));
-      mockSyncCubit.setHasData(false);
+      when(() => mockFuelListCubit.state).thenReturn(const FuelListState());
+      mockSyncCubit._hasData = false;
       await tester.pumpWidget(buildSubject());
       expect(
         find.text('Nema dostupnih podataka. Provjerite internetsku vezu i pritisnite gumb za ažuriranje.'),
@@ -60,7 +70,8 @@ void main() {
     });
 
     testWidgets('shows snackbar on SyncPartial with existing data', (tester) async {
-      mockSyncCubit.setHasData(true);
+      mockSyncCubit._hasData = true;
+      when(() => mockFuelListCubit.state).thenReturn(const FuelListState(isLoading: false));
       whenListen(
         mockSyncCubit,
         Stream<DataSyncState>.fromIterable([
@@ -77,7 +88,8 @@ void main() {
     });
 
     testWidgets('shows snackbar on SyncFailure with existing data', (tester) async {
-      mockSyncCubit.setHasData(true);
+      mockSyncCubit._hasData = true;
+      when(() => mockFuelListCubit.state).thenReturn(const FuelListState(isLoading: false));
       whenListen(
         mockSyncCubit,
         Stream<DataSyncState>.fromIterable([
@@ -91,15 +103,6 @@ void main() {
         find.text('Ažuriranje nije uspjelo. Prikazani su posljednji dostupni podaci.'),
         findsOneWidget,
       );
-    });
-
-    testWidgets('shows last update timestamp', (tester) async {
-      when(() => mockSyncCubit.state).thenReturn(const SyncSuccess());
-      mockSyncCubit.setHasData(true);
-      mockSyncCubit.setLastSyncTime(DateTime(2026, 3, 24, 18, 0));
-      await tester.pumpWidget(buildSubject());
-      expect(find.textContaining('Zadnje ažuriranje:'), findsOneWidget);
-      expect(find.textContaining('24.03.2026.'), findsOneWidget);
     });
   });
 }

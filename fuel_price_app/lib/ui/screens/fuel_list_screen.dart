@@ -6,6 +6,7 @@ import 'package:fuel_price_app/blocs/data_sync_state.dart';
 import 'package:fuel_price_app/blocs/fuel_list_cubit.dart';
 import 'package:fuel_price_app/ui/widgets/empty_state.dart';
 import 'package:fuel_price_app/ui/widgets/sync_spinner.dart';
+import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/ui/screens/fuel_detail_screen.dart';
 import 'package:fuel_price_app/ui/screens/settings_screen.dart';
 
@@ -255,6 +256,3 @@ class _FuelCard extends StatelessWidget {
     };
   }
 }
-
-// Re-export FuelType for convenience in _FuelCard switch
-import 'package:fuel_price_app/models/fuel_type.dart';
