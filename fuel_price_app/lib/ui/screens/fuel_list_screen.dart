@@ -156,7 +156,7 @@ class _FuelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final displayPrice = item.predictedPrice ?? item.currentPrice;
+    final displayPrice = item.currentPrice;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -197,13 +197,12 @@ class _FuelCard extends StatelessWidget {
                       item.fuelType.displayName,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
-                    if (item.predictedPrice != null)
-                      Text(
-                        'Predviđena cijena',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                    Text(
+                      displayPrice != null ? 'Trenutna cijena' : 'Nema podataka',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
                       ),
+                    ),
                   ],
                 ),
               ),

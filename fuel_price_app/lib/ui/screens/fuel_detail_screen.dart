@@ -149,6 +149,15 @@ class _PredictionCard extends StatelessWidget {
                   color: cs.onPrimaryContainer,
                 ),
               ),
+              if (state.currentPrice != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Trenutna: ${state.currentPrice!.toStringAsFixed(2)} €',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: cs.onPrimaryContainer.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
               if (diff != null) ...[
                 const SizedBox(height: 8),
                 _DiffChip(diff: diff, trend: state.trend),
@@ -182,7 +191,7 @@ class _DiffChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        '$arrow $sign${diff.toStringAsFixed(3)} €',
+        '$arrow $sign${diff.toStringAsFixed(2)} €',
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w600,
