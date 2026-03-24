@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
@@ -105,9 +106,18 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
       await _recalculatePredictions();
       await _fuelListCubit.load();
     } else {
-      // First launch — auto-sync (will call _fuelListCubit.load after sync)
+      // First launch — try sync, if fails seed demo data for testing
       await _fuelListCubit.load();
-      _syncCubit.sync();
+      await _syncCubit.sync();
+
+      // If sync failed (no data), seed demo data so app is usable
+      final afterSync = await _priceRepo.getOilPrices('BZ=F', days: 30);
+      if (afterSync.isEmpty) {
+        await _seedDemoData();
+        _syncCubit.setHasData(true);
+        await _recalculatePredictions();
+        await _fuelListCubit.load();
+      }
     }
 
     // Sync remote config
@@ -147,6 +157,52 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
 
     // Cleanup old data
     await _priceRepo.cleanOldData(const Duration(days: 730));
+  }
+
+  /// Seed realistic demo data when API is unavailable (e.g., emulator)
+  Future<void> _seedDemoData() async {
+    final now = DateTime.now();
+    final random = Random();
+
+    // Seed 20 days of Brent prices around 72 USD/barrel
+    for (var i = 20; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final price = 70.0 + random.nextDouble() * 5; // 70-75 USD
+      await _priceRepo.saveOilPrice(
+        OilPrice(date: date, cifMed: price, source: 'BZ=F'),
+      );
+    }
+
+    // Seed exchange rate (~0.92 EUR/USD)
+    await _priceRepo.saveExchangeRate(
+      ExchangeRate(date: now, usdEur: 0.92 + random.nextDouble() * 0.02),
+    );
+
+    // Seed some historical fuel prices
+    for (final ft in FuelType.values) {
+      final basePrice = switch (ft) {
+        FuelType.es95 => 1.45,
+        FuelType.es100 => 1.52,
+        FuelType.eurodizel => 1.40,
+        FuelType.unp10kg => 5.10,
+      };
+      // Current official price (last Tuesday)
+      final lastTuesday = now.subtract(Duration(days: (now.weekday - DateTime.tuesday) % 7));
+      await _priceRepo.saveFuelPrice(
+        FuelPrice(fuelType: ft, date: lastTuesday, price: basePrice, isPrediction: false),
+      );
+      // A few historical prices
+      for (var i = 1; i <= 4; i++) {
+        await _priceRepo.saveFuelPrice(
+          FuelPrice(
+            fuelType: ft,
+            date: lastTuesday.subtract(Duration(days: i * 14)),
+            price: basePrice + (random.nextDouble() - 0.5) * 0.1,
+            isPrediction: false,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _recalculatePredictions() async {
