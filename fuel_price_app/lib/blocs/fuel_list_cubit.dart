@@ -5,7 +5,6 @@ import 'package:fuel_price_app/data/repositories/settings_repository.dart';
 import 'package:fuel_price_app/domain/formula_engine.dart';
 import 'package:fuel_price_app/domain/price_cycle_service.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
-import 'package:fuel_price_app/models/fuel_price.dart';
 
 class FuelListItem extends Equatable {
   final FuelType fuelType;

@@ -187,7 +187,6 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final df = DateFormat('dd.MM.yyyy.');
 
     return Row(
