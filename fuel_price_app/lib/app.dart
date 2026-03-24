@@ -96,15 +96,17 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
   }
 
   Future<void> _initApp() async {
-    await _fuelListCubit.load();
     await _settingsCubit.load();
 
     // Check for existing data
     final prices = await _priceRepo.getOilPrices('BZ=F', days: 30);
     if (prices.isNotEmpty) {
       _syncCubit.setHasData(true);
+      await _recalculatePredictions();
+      await _fuelListCubit.load();
     } else {
-      // First launch — auto-sync
+      // First launch — auto-sync (will call _fuelListCubit.load after sync)
+      await _fuelListCubit.load();
       _syncCubit.sync();
     }
 
@@ -119,12 +121,13 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     final syncResult = result as SyncResult;
 
     // Save oil prices
-    if (syncResult.oilPrices != null) {
+    if (syncResult.oilPrices != null && syncResult.oilPrices!.isNotEmpty) {
       final now = DateTime.now();
-      for (var i = 0; i < syncResult.oilPrices!.length; i++) {
-        final date = now.subtract(Duration(days: syncResult.oilPrices!.length - 1 - i));
+      final prices = syncResult.oilPrices!;
+      for (var i = 0; i < prices.length; i++) {
+        final date = now.subtract(Duration(days: prices.length - 1 - i));
         await _priceRepo.saveOilPrice(
-          OilPrice(date: date, cifMed: syncResult.oilPrices![i], source: 'BZ=F'),
+          OilPrice(date: date, cifMed: prices[i], source: 'BZ=F'),
         );
       }
     }
@@ -136,7 +139,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
       );
     }
 
-    // Recalculate predictions
+    // Recalculate predictions even with partial data
     await _recalculatePredictions();
 
     // Reload fuel list
@@ -151,11 +154,11 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     final oilPrices = await _priceRepo.getOilPrices('BZ=F', days: 30);
     final rates = await _priceRepo.getExchangeRates(days: 30);
 
-    if (oilPrices.length < 14 || rates.isEmpty) return;
+    if (oilPrices.isEmpty || rates.isEmpty) return;
 
-    // Take last 14 calendar days of oil prices
-    final recentOil = oilPrices.reversed.take(14).toList().reversed.toList();
-    // Use last known exchange rate for all days (simplification)
+    // Take up to 14 calendar days of oil prices (use what we have)
+    final count = oilPrices.length < 14 ? oilPrices.length : 14;
+    final recentOil = oilPrices.reversed.take(count).toList().reversed.toList();
     final lastRate = rates.last.usdEur;
 
     final cifValues = recentOil.map((p) => p.cifMed).toList();

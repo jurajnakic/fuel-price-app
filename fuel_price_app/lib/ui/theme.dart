@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Fuel app color seed — petrol blue-green
-const _seedColor = Color(0xFF1B6B5A);
+/// Fuel app color seed — calm blue
+const _seedColor = Color(0xFF4A6FA5);
 
 final lightTheme = ThemeData(
   colorScheme: ColorScheme.fromSeed(

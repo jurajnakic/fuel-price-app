@@ -7,7 +7,7 @@ import 'package:fuel_price_app/blocs/fuel_list_cubit.dart';
 import 'package:fuel_price_app/ui/widgets/empty_state.dart';
 import 'package:fuel_price_app/ui/widgets/sync_spinner.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
-import 'package:fuel_price_app/ui/screens/fuel_detail_screen.dart';
+import 'package:fuel_price_app/ui/screens/fuel_detail_pager.dart';
 import 'package:fuel_price_app/ui/screens/settings_screen.dart';
 
 class FuelListScreen extends StatelessWidget {
@@ -131,8 +131,8 @@ class _FuelListBody extends StatelessWidget {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => FuelDetailScreen(
-                        fuelType: item.fuelType,
+                      builder: (_) => FuelDetailPager(
+                        initialFuelType: item.fuelType,
                       ),
                     ),
                   ),
@@ -161,7 +161,7 @@ class _FuelCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: cs.surfaceContainerLow,
+      color: cs.surfaceContainer,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
