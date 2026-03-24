@@ -17,6 +17,8 @@ class DataSyncCubit extends Cubit<DataSyncState> {
   bool get hasData => _hasData;
   DateTime? get lastSyncTime => _lastSyncTime;
 
+  void setHasData(bool value) => _hasData = value;
+
   Future<void> sync() async {
     if (_syncing) return; // prevent concurrent syncs
     _syncing = true;
