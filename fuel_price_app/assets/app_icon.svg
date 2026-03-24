@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1565C0"/>
+      <stop offset="100%" style="stop-color:#0D47A1"/>
+    </linearGradient>
+    <linearGradient id="pumpGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#E0E0E0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="1024" height="1024" rx="220" ry="220" fill="url(#bg)"/>
+
+  <!-- Fuel pump body -->
+  <rect x="320" y="280" width="260" height="380" rx="24" fill="url(#pumpGrad)" opacity="0.95"/>
+
+  <!-- Pump screen/display -->
+  <rect x="352" y="320" width="196" height="100" rx="12" fill="#1565C0" opacity="0.3"/>
+
+  <!-- Pump nozzle -->
+  <path d="M580 380 L640 340 L660 360 L620 440 L600 440 L580 380Z" fill="white" opacity="0.9"/>
+  <path d="M640 340 L700 300 L720 320 L660 360Z" fill="white" opacity="0.7"/>
+
+  <!-- Pump hose (curved) -->
+  <path d="M620 440 Q680 480 700 540 Q720 600 680 620" stroke="white" stroke-width="16" fill="none" opacity="0.8" stroke-linecap="round"/>
+
+  <!-- Nozzle tip -->
+  <rect x="660" y="610" width="50" height="16" rx="4" fill="white" opacity="0.8" transform="rotate(15, 685, 618)"/>
+
+  <!-- Pump base -->
+  <rect x="300" y="660" width="300" height="40" rx="12" fill="white" opacity="0.85"/>
+
+  <!-- Up arrow (green, left side) -->
+  <g transform="translate(160, 340)">
+    <polygon points="60,0 110,80 85,80 85,180 35,180 35,80 10,80" fill="#4CAF50" opacity="0.9"/>
+  </g>
+
+  <!-- Down arrow (red, right side) -->
+  <g transform="translate(740, 420)">
+    <polygon points="60,180 110,100 85,100 85,0 35,0 35,100 10,100" fill="#EF5350" opacity="0.9"/>
+  </g>
+
+  <!-- Subtle shine overlay -->
+  <ellipse cx="400" cy="300" rx="300" ry="200" fill="white" opacity="0.05"/>
+</svg>
