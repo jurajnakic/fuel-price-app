@@ -72,12 +72,6 @@ class _DetailBody extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // Info row
-          if (state.lastChangeDate != null || state.nextChangeDate != null)
-            _InfoRow(state: state),
-
-          const SizedBox(height: 24),
-
           // Chart
           Text('Kretanje cijene', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -105,6 +99,14 @@ class _DetailBody extends StatelessWidget {
                   )
                 : _PriceChart(prices: state.priceHistory),
           ),
+
+          const SizedBox(height: 24),
+
+          // Info row at bottom
+          if (state.lastChangeDate != null || state.nextChangeDate != null)
+            _InfoRow(state: state),
+
+          const SizedBox(height: 16),
         ],
       ),
     );
