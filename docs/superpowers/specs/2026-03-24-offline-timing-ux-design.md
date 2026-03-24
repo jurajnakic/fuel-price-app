@@ -30,6 +30,10 @@ This spec covers corrections and additions to the fuel price prediction app:
 - Retry logic unchanged (hourly on failure)
 - Remote config fetch also moves to 18:00 CET (same trigger)
 
+**V2 Spec Amendments Required:**
+- V2 spec line 115: "alongside 16:00 CET price data fetch" → change to 18:00 CET
+- V2 spec line 168: "Data fetch: Daily at 16:00 CET" → change to 18:00 CET
+
 ---
 
 ## 2. First Launch & Empty State UX
@@ -117,17 +121,22 @@ UNP boca 10kg   5,20 €/kg →
 - **↑** (red) — predicted price is higher than current official price
 - **↓** (green) — predicted price is lower than current official price
 - **→** (grey) — no change (within ±0.005 € tolerance for rounding)
+- No arrow — when there is no current official price yet (first prediction)
 
 ### Logic
 
 ```dart
-String trendIndicator(double predicted, double current) {
+/// Returns trend arrow, or null if current price is not available.
+String? trendIndicator(double predicted, double? current) {
+  if (current == null) return null; // no trend on first prediction
   final diff = predicted - current;
   if (diff > 0.005) return '↑';  // rise
   if (diff < -0.005) return '↓'; // drop
   return '→';                     // unchanged
 }
 ```
+
+When `trendIndicator` returns `null`, the UI shows only the predicted price without any arrow.
 
 **Note:** The predicted price updates daily as new market data arrives. The trend compares the evolving prediction against the last official Tuesday price. This is the **B approach** — single predicted price with trend indicator, no daily price breakdown.
 
@@ -170,25 +179,28 @@ cycleDays: 14,
 
 ```dart
 DateTime nextPriceChangeDate(DateTime today, DateTime referenceDate, int cycleDays) {
-  // Find the next cycle date on or after today
+  // If reference date is in the future, that's the next change date
+  if (today.isBefore(referenceDate)) return referenceDate;
+
   int daysDiff = today.difference(referenceDate).inDays;
   int cyclesPassed = (daysDiff / cycleDays).floor();
-  DateTime next = referenceDate.add(Duration(days: (cyclesPassed + 1) * cycleDays));
-  // If today IS a change date, still show next one (current already happened)
-  if (daysDiff % cycleDays == 0 && today.isAfter(referenceDate)) {
-    // Today is a change date — prediction is for the NEXT cycle
-    next = referenceDate.add(Duration(days: (cyclesPassed + 1) * cycleDays));
-  }
-  return next;
+
+  // If today is exactly a cycle date, the change already happened today —
+  // prediction targets the NEXT cycle
+  return referenceDate.add(Duration(days: (cyclesPassed + 1) * cycleDays));
 }
 ```
 
+**Note:** On a price change date, the app shows the prediction for the *next* cycle (today + `cycleDays`), since today's change has already taken effect.
+
 ### Notification Scheduling
 
-Notifications are scheduled relative to the next price change Tuesday:
+Notifications are scheduled relative to the next price change date:
 - If user chose Monday → 1 day before
 - If user chose Sunday → 2 days before
 - If user chose Saturday → 3 days before
+
+**Constraint:** `cycle_days` must be a multiple of 7 so that price changes always fall on the same weekday (Tuesday, given the reference date 2026-03-24 is a Tuesday). This keeps the notification text ("u utorak" / "sutra") correct. The remote config should enforce this constraint; if a non-multiple-of-7 value is received, fall back to 14.
 
 After each cycle date passes, app recalculates and schedules the next notification.
 
@@ -228,7 +240,7 @@ After each cycle date passes, app recalculates and schedules the next notificati
 
 | Test | Description | Expected |
 |------|-------------|----------|
-| Next cycle calculation | Various "today" dates relative to reference | Correct next Tuesday returned |
+| Next cycle calculation | Various "today" dates relative to reference | Correct next change date returned |
 | Cycle across year boundary | Reference 2026-12-29, today 2027-01-05 | Correct date in January |
 | Remote config cycle change | cycle_days changes from 14 to 7 | Next date recalculated immediately |
 | Notification rescheduling | User changes day from Monday to Saturday | Next notification date updated |
@@ -251,6 +263,15 @@ After each cycle date passes, app recalculates and schedules the next notificati
 | Fetch during app close | App backgrounded during sync | WorkManager handles gracefully |
 | Rapid retry | User taps "Ažuriraj" 5x quickly | Only one fetch runs at a time |
 
+### 6.7 Scheduling Tests
+
+| Test | Description | Expected |
+|------|-------------|----------|
+| WorkManager fires at 18:00 CET | Verify scheduled time is 18:00 CET | Task registered with correct time |
+| DST transition (CET→CEST) | March 29, 2026 clock change | Task still fires at 18:00 local Zagreb time |
+| Reference date in future | referenceDate = tomorrow | nextPriceChangeDate returns referenceDate |
+| Invalid cycle_days | cycle_days = 10 (not multiple of 7) | Falls back to 14 |
+
 ---
 
 ## Impact on Existing Plan
@@ -265,6 +286,14 @@ After each cycle date passes, app recalculates and schedules the next notificati
 | Home screen | Add empty state / first-launch view |
 | Notification scheduling | Use `price_cycle` from remote config instead of hardcoded "next Tuesday" |
 | Test suite | Add stress tests from section 6 |
+
+---
+
+## V2 Spec Notification Alignment
+
+V2 spec says "no arrow if unchanged" for notifications. This spec uses → (grey) for the home screen. To align:
+- **Home screen:** Show → (grey) for unchanged prices
+- **Notifications:** Omit fuels with unchanged prices entirely (no arrow, no line) — keeps notification text compact
 
 ---
 
