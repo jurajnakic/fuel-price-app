@@ -149,15 +149,6 @@ class _PredictionCard extends StatelessWidget {
                   color: cs.onPrimaryContainer,
                 ),
               ),
-              if (state.currentPrice != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Trenutna: ${state.currentPrice!.toStringAsFixed(2)} €',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: cs.onPrimaryContainer.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
               if (diff != null) ...[
                 const SizedBox(height: 8),
                 _DiffChip(diff: diff, trend: state.trend),
