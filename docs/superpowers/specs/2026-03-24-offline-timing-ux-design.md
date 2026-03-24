@@ -73,34 +73,40 @@ App starts
 
 ### Data Fetch Process
 
-All three data sources (Yahoo Finance, HNB API, GitHub config) are fetched together. This is an **all-or-nothing** operation.
+All three data sources (Yahoo Finance, HNB API, GitHub config) are fetched in parallel. **Partial success is allowed** — save what succeeds, retry only what fails.
 
-**Timeout:** 10 seconds total for all sources combined.
+**Timeout:** 10 seconds per source.
 
 ### Implementation
 
 ```
 DataSyncCubit states:
-  - SyncIdle          → no sync in progress
-  - SyncInProgress    → spinner visible
-  - SyncSuccess       → data loaded, transition to normal view
-  - SyncFailure(msg)  → error message shown
+  - SyncIdle              → no sync in progress
+  - SyncInProgress        → spinner visible
+  - SyncSuccess           → all sources fetched successfully
+  - SyncPartial(failures) → some sources succeeded, some failed
+  - SyncFailure(msg)      → all sources failed
 ```
 
 **Behavior:**
-1. Emit `SyncInProgress` → UI shows spinner overlay with "Preuzimanje podataka..."
-2. Start all 3 HTTP requests concurrently
-3. Wait for all to complete OR 10-second timeout (whichever comes first)
-4. If all succeed → save to SQLite → emit `SyncSuccess`
-5. If any fails or timeout → emit `SyncFailure`
-   - If SQLite has existing data → show stale data + snackbar: "Ažuriranje nije uspjelo. Prikazani su posljednji dostupni podaci."
-   - If SQLite is empty → show empty state screen with retry button
+1. Emit `SyncInProgress` → UI shows spinner with "Preuzimanje podataka..."
+2. Start all 3 HTTP requests concurrently (each with 10s timeout)
+3. As each source completes successfully → save its data to SQLite immediately
+4. For each source that fails or times out → retry once (only that source)
+5. After all complete (including retries):
+   - **All succeeded** → emit `SyncSuccess`
+   - **Some succeeded, some failed** → emit `SyncPartial` → save partial data, show snackbar: "Ažuriranje nije u potpunosti uspjelo. Prikazani su posljednji dostupni podaci."
+   - **All failed** → emit `SyncFailure`
+     - If SQLite has existing data → show stale data + snackbar: "Ažuriranje nije uspjelo. Prikazani su posljednji dostupni podaci."
+     - If SQLite is empty → show empty state screen with retry button
 
-**No partial saves.** If Yahoo succeeds but HNB fails, we discard all and retry next cycle.
+**UI always shows generic message** — no per-source details visible to user. Internally, failed sources are logged for debugging.
+
+**Price calculation:** If oil prices succeed but exchange rate fails (or vice versa), the app uses the latest available data from SQLite for the missing source. Prediction is recalculated with whatever combination of fresh + cached data is available.
 
 ### Manual Refresh (Pull-to-Refresh)
 
-Same 10-second timeout and all-or-nothing logic. On failure:
+Same logic: parallel fetch, 10s per source, retry failures once. On partial/full failure:
 - Snackbar: "Ažuriranje nije uspjelo. Pokušajte ponovno kasnije."
 - Existing data remains visible
 
@@ -231,10 +237,13 @@ After each cycle date passes, app recalculates and schedules the next notificati
 
 | Test | Description | Expected |
 |------|-------------|----------|
-| Partial source failure | Yahoo OK, HNB fails | Nothing saved, SyncFailure |
-| Corrupt API response | Invalid JSON from Yahoo | SyncFailure, existing data preserved |
-| Empty API response | Valid JSON but 0 records | SyncFailure (no data to calculate) |
+| Partial source failure | Yahoo OK, HNB fails after retry | Yahoo data saved, SyncPartial, prediction uses cached exchange rate |
+| All sources fail | All 3 timeout after retry | Nothing saved, SyncFailure |
+| Corrupt API response | Invalid JSON from Yahoo | Yahoo fails, retry, others saved if OK |
+| Empty API response | Valid JSON but 0 records | Treated as failure for that source, retry |
 | Duplicate dates | Same date data fetched twice | No duplicate DB records (UPSERT or skip) |
+| Retry succeeds | Yahoo fails first try, succeeds on retry | All data saved, SyncSuccess |
+| Cached + fresh mix | Fresh oil prices + cached exchange rate | Prediction calculated with mixed data |
 
 ### 6.4 Price Cycle Tests
 
@@ -279,7 +288,7 @@ After each cycle date passes, app recalculates and schedules the next notificati
 | Area | Change |
 |------|--------|
 | `WorkManager` schedule | 16:00 → 18:00 CET |
-| `DataSyncCubit` | Add `SyncFailure` state, 10s timeout |
+| `DataSyncCubit` | Add `SyncPartial`/`SyncFailure` states, 10s per-source timeout, retry logic |
 | `FuelParams` model | Add `referenceDate`, `cycleDays` |
 | `fuel_params.json` | Add `price_cycle` section |
 | Home screen | Add trend indicator (↑↓→) |
