@@ -8,10 +8,26 @@ import 'package:fuel_price_app/models/fuel_params.dart';
 import 'package:fuel_price_app/models/fuel_price.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 
+/// Standalone detail screen (with Scaffold + AppBar)
 class FuelDetailScreen extends StatelessWidget {
   final FuelType fuelType;
 
   const FuelDetailScreen({super.key, required this.fuelType});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(fuelType.displayName)),
+      body: FuelDetailPage(fuelType: fuelType),
+    );
+  }
+}
+
+/// Detail page content (no Scaffold — used inside PageView)
+class FuelDetailPage extends StatelessWidget {
+  final FuelType fuelType;
+
+  const FuelDetailPage({super.key, required this.fuelType});
 
   @override
   Widget build(BuildContext context) {
@@ -25,18 +41,13 @@ class FuelDetailScreen extends StatelessWidget {
         referenceDate: DateTime.parse(params.referenceDate),
         cycleDays: params.cycleDays,
       )..load(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(fuelType.displayName),
-        ),
-        body: BlocBuilder<FuelDetailCubit, FuelDetailState>(
-          builder: (context, state) {
-            if (state.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return _DetailBody(state: state);
-          },
-        ),
+      child: BlocBuilder<FuelDetailCubit, FuelDetailState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _DetailBody(state: state);
+        },
       ),
     );
   }
@@ -84,7 +95,7 @@ class _DetailBody extends StatelessWidget {
             child: state.priceHistory.isEmpty
                 ? Card(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    color: cs.surfaceContainerLow,
+                    color: cs.surfaceContainer,
                     child: Center(
                       child: Text(
                         'Nema podataka za prikaz',
@@ -225,7 +236,7 @@ class _InfoTile extends StatelessWidget {
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: cs.surfaceContainerLow,
+      color: cs.surfaceContainer,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -299,7 +310,7 @@ class _PriceChart extends StatelessWidget {
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: cs.surfaceContainerLow,
+      color: cs.surfaceContainer,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
         child: LineChart(

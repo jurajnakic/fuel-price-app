@@ -1,80 +1,73 @@
-// ignore_for_file: depend_on_referenced_packages
+// ignore_for_file: depend_on_referenced_packages, avoid_print
 import 'dart:io';
 import 'dart:math';
 import 'package:image/image.dart' as img;
 
 void main() {
   final size = 1024;
+
+  // === FULL ICON (for legacy launchers) ===
   final image = img.Image(width: size, height: size);
 
-  // Blue gradient background
-  for (var y = 0; y < size; y++) {
-    for (var x = 0; x < size; x++) {
-      final t = (x + y) / (size * 2);
-      final r = (0x15 + (0x0D - 0x15) * t).round().clamp(0, 255);
-      final g = (0x65 + (0x47 - 0x65) * t).round().clamp(0, 255);
-      final b = (0xC0 + (0xA1 - 0xC0) * t).round().clamp(0, 255);
+  // Soft blue background
+  _fill(image, 0x5B, 0x8D, 0xD9);
+
+  // Round corners
+  _roundCorners(image, 220);
+
+  // Draw white fuel pump and arrows
+  _drawPumpAndArrows(image, 255, 255, 255);
+
+  File('assets/app_icon.png').writeAsBytesSync(img.encodePng(image));
+  print('Generated assets/app_icon.png');
+
+  // === FOREGROUND (for adaptive icons, transparent bg) ===
+  final fg = img.Image(width: size, height: size);
+  _drawPumpAndArrows(fg, 255, 255, 255);
+
+  File('assets/app_icon_foreground.png').writeAsBytesSync(img.encodePng(fg));
+  print('Generated assets/app_icon_foreground.png');
+}
+
+void _drawPumpAndArrows(img.Image image, int r, int g, int b) {
+  // Fuel pump body — clean rectangle
+  _fillRect(image, 360, 260, 600, 640, r, g, b, 255);
+
+  // Pump display/screen — cutout (darker)
+  _fillRect(image, 392, 300, 568, 400, r, g, b, 80);
+
+  // Pump base — wider rectangle
+  _fillRect(image, 330, 640, 630, 690, r, g, b, 255);
+
+  // Nozzle holder — small rect on right side
+  _fillRect(image, 600, 340, 630, 400, r, g, b, 255);
+
+  // Nozzle arm — angled line going right and up
+  _drawLine(image, 630, 370, 710, 300, 12, r, g, b, 255);
+
+  // Hose — smooth curve from nozzle holder down
+  for (var t = 0.0; t <= 1.0; t += 0.002) {
+    final x = 630 + (90 * t);
+    final y = 400 + (160 * t) + (40 * sin(t * 3.14));
+    _circle(image, x.round(), y.round(), 7, r, g, b, 255);
+  }
+
+  // Nozzle tip at end of hose
+  _fillRect(image, 700, 565, 750, 580, r, g, b, 255);
+
+  // Up arrow — left side
+  _drawArrowUp(image, 210, 320, 55, 200, r, g, b);
+
+  // Down arrow — right side
+  _drawArrowDown(image, 820, 400, 55, 200, r, g, b);
+}
+
+void _fill(img.Image image, int r, int g, int b) {
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
       image.setPixelRgba(x, y, r, g, b, 255);
     }
   }
-
-  // Round corners (mask)
-  final cornerRadius = 220;
-  _roundCorners(image, cornerRadius);
-
-  // Draw fuel pump body (white rounded rect)
-  _fillRoundedRect(image, 320, 280, 580, 660, 24, 255, 255, 255, 240);
-
-  // Draw pump display (dark blue)
-  _fillRoundedRect(image, 352, 320, 548, 420, 12, 21, 101, 192, 80);
-
-  // Draw pump base
-  _fillRoundedRect(image, 300, 660, 600, 700, 12, 255, 255, 255, 220);
-
-  // Draw nozzle arm
-  _drawThickLine(image, 580, 380, 700, 310, 14, 255, 255, 255, 220);
-
-  // Draw hose (thick curved line approx)
-  for (var t = 0.0; t <= 1.0; t += 0.002) {
-    final x = 620 + (80 * t) + (20 * sin(t * 3.14));
-    final y = 440 + (180 * t);
-    _fillCircle(image, x.round(), y.round(), 8, 255, 255, 255, 200);
-  }
-
-  // Draw nozzle tip
-  _fillRoundedRect(image, 665, 615, 730, 635, 4, 255, 255, 255, 200);
-
-  // Up arrow (green, left)
-  _drawArrowUp(image, 220, 340, 60, 180, 76, 175, 80, 230);
-
-  // Down arrow (red, right)
-  _drawArrowDown(image, 800, 420, 60, 180, 239, 83, 80, 230);
-
-  // Save full icon
-  final pngBytes = img.encodePng(image);
-  File('assets/app_icon.png').writeAsBytesSync(pngBytes);
-  print('Generated assets/app_icon.png');
-
-  // Create foreground (same but transparent background for adaptive icon)
-  final fg = img.Image(width: size, height: size);
-
-  // Draw everything except background
-  _fillRoundedRect(fg, 320, 280, 580, 660, 24, 255, 255, 255, 240);
-  _fillRoundedRect(fg, 352, 320, 548, 420, 12, 21, 101, 192, 180);
-  _fillRoundedRect(fg, 300, 660, 600, 700, 12, 255, 255, 255, 220);
-  _drawThickLine(fg, 580, 380, 700, 310, 14, 255, 255, 255, 220);
-  for (var t = 0.0; t <= 1.0; t += 0.002) {
-    final x = 620 + (80 * t) + (20 * sin(t * 3.14));
-    final y = 440 + (180 * t);
-    _fillCircle(fg, x.round(), y.round(), 8, 255, 255, 255, 200);
-  }
-  _fillRoundedRect(fg, 665, 615, 730, 635, 4, 255, 255, 255, 200);
-  _drawArrowUp(fg, 220, 340, 60, 180, 76, 175, 80, 230);
-  _drawArrowDown(fg, 800, 420, 60, 180, 239, 83, 80, 230);
-
-  final fgBytes = img.encodePng(fg);
-  File('assets/app_icon_foreground.png').writeAsBytesSync(fgBytes);
-  print('Generated assets/app_icon_foreground.png');
 }
 
 void _roundCorners(img.Image image, int radius) {
@@ -82,144 +75,122 @@ void _roundCorners(img.Image image, int radius) {
   final h = image.height;
   for (var y = 0; y < h; y++) {
     for (var x = 0; x < w; x++) {
-      // Check if pixel is outside rounded corners
       bool outside = false;
       if (x < radius && y < radius) {
-        outside = _outsideCircle(x, y, radius, radius, radius);
+        outside = _dist(x, y, radius, radius) > radius;
       } else if (x >= w - radius && y < radius) {
-        outside = _outsideCircle(x, y, w - radius - 1, radius, radius);
+        outside = _dist(x, y, w - radius - 1, radius) > radius;
       } else if (x < radius && y >= h - radius) {
-        outside = _outsideCircle(x, y, radius, h - radius - 1, radius);
+        outside = _dist(x, y, radius, h - radius - 1) > radius;
       } else if (x >= w - radius && y >= h - radius) {
-        outside = _outsideCircle(x, y, w - radius - 1, h - radius - 1, radius);
+        outside = _dist(x, y, w - radius - 1, h - radius - 1) > radius;
       }
-      if (outside) {
-        image.setPixelRgba(x, y, 0, 0, 0, 0);
-      }
+      if (outside) image.setPixelRgba(x, y, 0, 0, 0, 0);
     }
   }
 }
 
-bool _outsideCircle(int x, int y, int cx, int cy, int r) {
-  final dx = x - cx;
-  final dy = y - cy;
-  return dx * dx + dy * dy > r * r;
+double _dist(int x, int y, int cx, int cy) {
+  final dx = (x - cx).toDouble();
+  final dy = (y - cy).toDouble();
+  return sqrt(dx * dx + dy * dy);
 }
 
-void _fillRoundedRect(img.Image image, int x1, int y1, int x2, int y2, int radius,
+void _fillRect(img.Image image, int x1, int y1, int x2, int y2,
     int r, int g, int b, int a) {
   for (var y = y1; y < y2; y++) {
     for (var x = x1; x < x2; x++) {
-      if (x < 0 || x >= image.width || y < 0 || y >= image.height) continue;
-      // Simple rounded corner check
-      bool inside = true;
-      if (x < x1 + radius && y < y1 + radius) {
-        inside = !_outsideCircle(x, y, x1 + radius, y1 + radius, radius);
-      } else if (x >= x2 - radius && y < y1 + radius) {
-        inside = !_outsideCircle(x, y, x2 - radius - 1, y1 + radius, radius);
-      } else if (x < x1 + radius && y >= y2 - radius) {
-        inside = !_outsideCircle(x, y, x1 + radius, y2 - radius - 1, radius);
-      } else if (x >= x2 - radius && y >= y2 - radius) {
-        inside = !_outsideCircle(x, y, x2 - radius - 1, y2 - radius - 1, radius);
-      }
-      if (inside) {
-        _blendPixel(image, x, y, r, g, b, a);
+      if (x >= 0 && x < image.width && y >= 0 && y < image.height) {
+        _blend(image, x, y, r, g, b, a);
       }
     }
   }
 }
 
-void _fillCircle(img.Image image, int cx, int cy, int radius, int r, int g, int b, int a) {
+void _circle(img.Image image, int cx, int cy, int radius,
+    int r, int g, int b, int a) {
   for (var dy = -radius; dy <= radius; dy++) {
     for (var dx = -radius; dx <= radius; dx++) {
       if (dx * dx + dy * dy <= radius * radius) {
-        final x = cx + dx;
-        final y = cy + dy;
+        final x = cx + dx, y = cy + dy;
         if (x >= 0 && x < image.width && y >= 0 && y < image.height) {
-          _blendPixel(image, x, y, r, g, b, a);
+          _blend(image, x, y, r, g, b, a);
         }
       }
     }
   }
 }
 
-void _drawThickLine(img.Image image, int x1, int y1, int x2, int y2, int thickness,
-    int r, int g, int b, int a) {
-  final dx = x2 - x1;
-  final dy = y2 - y1;
-  final len = sqrt(dx * dx + dy * dy);
-  final steps = len.round() * 2;
+void _drawLine(img.Image image, int x1, int y1, int x2, int y2,
+    int thickness, int r, int g, int b, int a) {
+  final dx = (x2 - x1).toDouble();
+  final dy = (y2 - y1).toDouble();
+  final steps = sqrt(dx * dx + dy * dy).round() * 2;
   for (var i = 0; i <= steps; i++) {
     final t = i / steps;
-    final x = (x1 + dx * t).round();
-    final y = (y1 + dy * t).round();
-    _fillCircle(image, x, y, thickness ~/ 2, r, g, b, a);
+    _circle(image, (x1 + dx * t).round(), (y1 + dy * t).round(),
+        thickness ~/ 2, r, g, b, a);
   }
 }
 
-void _drawArrowUp(img.Image image, int cx, int top, int halfWidth, int height,
-    int r, int g, int b, int a) {
-  // Arrow head (triangle pointing up)
-  final headHeight = height ~/ 2;
-  for (var y = 0; y < headHeight; y++) {
-    final progress = y / headHeight;
-    final width = (halfWidth * progress).round();
-    for (var x = cx - width; x <= cx + width; x++) {
+void _drawArrowUp(img.Image image, int cx, int top, int hw, int h,
+    int r, int g, int b) {
+  final headH = h * 45 ~/ 100;
+  // Arrow head
+  for (var y = 0; y < headH; y++) {
+    final w = (hw * y / headH).round();
+    for (var x = cx - w; x <= cx + w; x++) {
       if (x >= 0 && x < image.width && (top + y) >= 0 && (top + y) < image.height) {
-        _blendPixel(image, x, top + y, r, g, b, a);
+        image.setPixelRgba(x, top + y, r, g, b, 255);
       }
     }
   }
-  // Arrow shaft
-  final shaftWidth = halfWidth ~/ 2;
-  for (var y = headHeight; y < height; y++) {
-    for (var x = cx - shaftWidth; x <= cx + shaftWidth; x++) {
+  // Shaft
+  final sw = hw * 40 ~/ 100;
+  for (var y = headH; y < h; y++) {
+    for (var x = cx - sw; x <= cx + sw; x++) {
       if (x >= 0 && x < image.width && (top + y) >= 0 && (top + y) < image.height) {
-        _blendPixel(image, x, top + y, r, g, b, a);
+        image.setPixelRgba(x, top + y, r, g, b, 255);
       }
     }
   }
 }
 
-void _drawArrowDown(img.Image image, int cx, int top, int halfWidth, int height,
-    int r, int g, int b, int a) {
-  // Arrow shaft
-  final headHeight = height ~/ 2;
-  final shaftWidth = halfWidth ~/ 2;
-  for (var y = 0; y < headHeight; y++) {
-    for (var x = cx - shaftWidth; x <= cx + shaftWidth; x++) {
+void _drawArrowDown(img.Image image, int cx, int top, int hw, int h,
+    int r, int g, int b) {
+  final headH = h * 45 ~/ 100;
+  final sw = hw * 40 ~/ 100;
+  // Shaft
+  for (var y = 0; y < h - headH; y++) {
+    for (var x = cx - sw; x <= cx + sw; x++) {
       if (x >= 0 && x < image.width && (top + y) >= 0 && (top + y) < image.height) {
-        _blendPixel(image, x, top + y, r, g, b, a);
+        image.setPixelRgba(x, top + y, r, g, b, 255);
       }
     }
   }
-  // Arrow head (triangle pointing down)
-  for (var y = 0; y < headHeight; y++) {
-    final progress = 1 - (y / headHeight);
-    final width = (halfWidth * progress).round();
-    for (var x = cx - width; x <= cx + width; x++) {
-      final py = top + headHeight + y;
+  // Arrow head
+  for (var y = 0; y < headH; y++) {
+    final w = (hw * (1 - y / headH)).round();
+    final py = top + h - headH + y;
+    for (var x = cx - w; x <= cx + w; x++) {
       if (x >= 0 && x < image.width && py >= 0 && py < image.height) {
-        _blendPixel(image, x, py, r, g, b, a);
+        image.setPixelRgba(x, py, r, g, b, 255);
       }
     }
   }
 }
 
-void _blendPixel(img.Image image, int x, int y, int r, int g, int b, int a) {
-  final existing = image.getPixel(x, y);
-  final er = existing.r.toInt();
-  final eg = existing.g.toInt();
-  final eb = existing.b.toInt();
-  final ea = existing.a.toInt();
-
+void _blend(img.Image image, int x, int y, int r, int g, int b, int a) {
+  if (a == 255) {
+    image.setPixelRgba(x, y, r, g, b, 255);
+    return;
+  }
+  final p = image.getPixel(x, y);
   final alpha = a / 255;
-  final invAlpha = 1 - alpha;
-
-  final nr = (r * alpha + er * invAlpha).round().clamp(0, 255);
-  final ng = (g * alpha + eg * invAlpha).round().clamp(0, 255);
-  final nb = (b * alpha + eb * invAlpha).round().clamp(0, 255);
-  final na = (a + ea * invAlpha).round().clamp(0, 255);
-
-  image.setPixelRgba(x, y, nr, ng, nb, na);
+  final inv = 1 - alpha;
+  image.setPixelRgba(x, y,
+      (r * alpha + p.r.toInt() * inv).round().clamp(0, 255),
+      (g * alpha + p.g.toInt() * inv).round().clamp(0, 255),
+      (b * alpha + p.b.toInt() * inv).round().clamp(0, 255),
+      (a + p.a.toInt() * inv).round().clamp(0, 255));
 }
