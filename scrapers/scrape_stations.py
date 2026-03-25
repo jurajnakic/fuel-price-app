@@ -225,11 +225,18 @@ def scrape_cijenegoriva() -> list[dict]:
 
         print(f"  {fuel_name} ({fuel_type}): {row_count} companies")
 
+    # --- Filter to known stations only ---
+    ALLOWED_STATIONS = {"ina", "petrol", "shell", "tifon", "lukoil"}
+
     # --- Transform to station list ---
     stations = []
     for company_name, fuels in sorted(companies.items()):
+        company_id = make_company_id(company_name)
+        if company_id not in ALLOWED_STATIONS:
+            print(f"  Skipping: {company_name} ({company_id})")
+            continue
         station = {
-            "id": make_company_id(company_name),
+            "id": company_id,
             "name": company_name,
             "url": SOURCE_URL,
             "updated": validity_date,
