@@ -8,8 +8,6 @@ import 'package:fuel_price_app/ui/widgets/empty_state.dart';
 import 'package:fuel_price_app/ui/widgets/sync_spinner.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/ui/screens/fuel_detail_pager.dart';
-import 'package:fuel_price_app/ui/screens/settings_screen.dart';
-
 class FuelListScreen extends StatelessWidget {
   const FuelListScreen({super.key});
 
@@ -17,16 +15,7 @@ class FuelListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cijene Goriva'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-        ],
+        title: const Text('Predikcije'),
       ),
       body: BlocConsumer<DataSyncCubit, DataSyncState>(
         listener: _syncListener,

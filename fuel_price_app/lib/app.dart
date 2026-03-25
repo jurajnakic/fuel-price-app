@@ -20,7 +20,12 @@ import 'package:fuel_price_app/models/fuel_params.dart';
 import 'package:fuel_price_app/models/fuel_price.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/models/oil_price.dart';
+import 'package:fuel_price_app/blocs/stations_cubit.dart';
+import 'package:fuel_price_app/data/services/station_price_service.dart';
+import 'package:fuel_price_app/data/repositories/station_repository.dart';
 import 'package:fuel_price_app/ui/screens/fuel_list_screen.dart';
+import 'package:fuel_price_app/ui/screens/station_list_screen.dart';
+import 'package:fuel_price_app/ui/screens/settings_screen.dart';
 import 'package:fuel_price_app/ui/theme.dart';
 import 'package:fuel_price_app/ui/widgets/disclaimer_dialog.dart';
 
@@ -44,6 +49,9 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
   late final DataSyncCubit _syncCubit;
   late final FuelListCubit _fuelListCubit;
   late final SettingsCubit _settingsCubit;
+  late final StationPriceService _stationPriceService;
+  late final StationRepository _stationRepo;
+  late final StationsCubit _stationsCubit;
   FuelParams _activeParams = FuelParams.defaultParams;
 
   @override
@@ -63,6 +71,14 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     _priceRepo = PriceRepository(widget.database);
     _settingsRepo = SettingsRepository(widget.database);
     _configRepo = ConfigRepository(widget.database, _remoteConfigService);
+
+    // Station services
+    _stationPriceService = StationPriceService(dio: _dio);
+    _stationRepo = StationRepository(widget.database);
+    _stationsCubit = StationsCubit(
+      service: _stationPriceService,
+      repository: _stationRepo,
+    );
 
     // Sync orchestrator with real services
     _syncCubit = DataSyncCubit(
@@ -247,6 +263,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     _syncCubit.close();
     _fuelListCubit.close();
     _settingsCubit.close();
+    _stationsCubit.close();
     _dio.close();
     super.dispose();
   }
@@ -258,6 +275,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         BlocProvider.value(value: _syncCubit),
         BlocProvider.value(value: _fuelListCubit),
         BlocProvider.value(value: _settingsCubit),
+        BlocProvider.value(value: _stationsCubit),
         RepositoryProvider.value(value: _priceRepo),
         RepositoryProvider.value(value: _settingsRepo),
       ],
@@ -292,6 +310,14 @@ class _AppHome extends StatefulWidget {
 }
 
 class _AppHomeState extends State<_AppHome> {
+  int _currentIndex = 0;
+
+  final _screens = const [
+    FuelListScreen(),
+    StationListScreen(),
+    SettingsScreen(),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -302,7 +328,35 @@ class _AppHomeState extends State<_AppHome> {
 
   @override
   Widget build(BuildContext context) {
-    return const FuelListScreen();
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.trending_up_outlined),
+            selectedIcon: Icon(Icons.trending_up),
+            label: 'Predikcije',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.local_gas_station_outlined),
+            selectedIcon: Icon(Icons.local_gas_station),
+            label: 'Postaje',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Postavke',
+          ),
+        ],
+      ),
+    );
   }
 }
 

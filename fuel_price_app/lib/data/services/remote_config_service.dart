@@ -4,7 +4,7 @@ import '../../models/fuel_params.dart';
 class RemoteConfigService {
   final Dio dio;
   static const _configUrl =
-      'https://raw.githubusercontent.com/iersegovic/fuel-price-app/main/config/fuel_params.json';
+      'https://raw.githubusercontent.com/jurajnakic/fuel-price-app/main/config/fuel_params.json';
 
   RemoteConfigService({Dio? dio}) : dio = dio ?? Dio();
 
