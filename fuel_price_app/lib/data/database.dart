@@ -16,8 +16,9 @@ class AppDatabase {
     final path = inMemory ? inMemoryDatabasePath : join(await getDatabasesPath(), 'fuel_prices.db');
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
     return _db!;
   }
@@ -88,6 +89,40 @@ class AppDatabase {
       await db.insert('notification_fuels', {'fuel_type': ft, 'enabled': 1});
     }
     await db.insert('notification_settings', {'id': 1, 'enabled': 1, 'day': 'monday', 'hour': 9});
+    await _createStationTables(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createStationTables(db);
+    }
+  }
+
+  Future<void> _createStationTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE stations (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        url TEXT NOT NULL,
+        updated TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE station_fuels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        station_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        price REAL NOT NULL,
+        FOREIGN KEY (station_id) REFERENCES stations (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE station_fetch_time (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        fetched_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<List<Map<String, dynamic>>> query(String table, {String? where, List<dynamic>? whereArgs, String? orderBy}) =>
