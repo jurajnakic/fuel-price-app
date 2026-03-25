@@ -9,23 +9,25 @@ Three changes to the fuel price prediction app:
 
 ## 1. Icon & App Name
 
-- Replace current app icon with `Ikona.png` (fuel nozzle + up/down arrows on blue background)
-- Use `flutter_launcher_icons` to generate all Android densities
-- For adaptive icon: use the image as foreground, keep blue (`#5B8DD9`) as background color
+- Copy `Ikona.png` (from repo root) to `fuel_price_app/assets/app_icon.png` (replaces existing)
+- Also use it as `assets/app_icon_foreground.png` (adaptive icon foreground layer)
+- Run `flutter_launcher_icons` to regenerate all Android densities
+- For adaptive icon: image as foreground, blue (`#5B8DD9`) background color
 - Rename app to "FuelLens" everywhere:
   - `AndroidManifest.xml` → `android:label="FuelLens"`
   - `app.dart` → `title: 'FuelLens'`
 
 ## 2. Bottom Navigation Bar
 
-- Replace current push/pop navigation with `NavigationBar` (Material 3)
+- New shell `Scaffold` in `app.dart` with `NavigationBar` and `IndexedStack`
 - 3 destinations:
   1. **Predikcije** — icon: `Icons.trending_up` — current FuelListScreen
   2. **Postaje** — icon: `Icons.local_gas_station` — new StationListScreen
   3. **Postavke** — icon: `Icons.settings` — existing SettingsScreen
 - Remove settings icon from FuelListScreen AppBar
-- Each tab preserves state (use `IndexedStack` or similar)
-- Detail screens (FuelDetailPager, station detail) still push as full-screen routes on top of the nav bar
+- Each tab is its own `Scaffold` with its own `AppBar` inside the `IndexedStack`
+- `IndexedStack` preserves tab state across switches
+- Detail screens (FuelDetailPager, station detail) push via root `Navigator` — bottom nav is hidden on detail screens (standard Material 3 behavior)
 
 ## 3. Station Prices Feature
 
@@ -61,7 +63,8 @@ Three changes to the fuel price prediction app:
 ```
 
 - Stations without data are **excluded** from JSON entirely
-- Fuel `type` field uses standardized keys: `es95`, `es100`, `eurodizel`, `lpg`, `premium_diesel`, `premium_95`, `unp_10kg`, etc.
+- Fuel `type` field uses standardized keys: `es95`, `es100`, `eurodizel`, `lpg`, `premium_diesel`, `premium_95`, `unp10kg`, etc.
+- Station fuel types are an independent namespace — they don't map 1:1 to the app's `FuelType` enum. The `name` field is what gets displayed.
 - Price is in EUR per unit (litre or kg)
 
 ### 3.3 Stations
@@ -86,7 +89,8 @@ Three changes to the fuel price prediction app:
 - AppBar with station name
 - List of fuels with name and price (EUR, 2 decimals)
 - "Ažurirano: DD.MM.YYYY." at the top
-- Standard fuel types (ES95, Eurodizel, etc.) listed first, then premium/specialty fuels
+- Fuel sort order: `es95`, `es100`, `eurodizel`, `lpg`, `unp10kg` first (in that order), then any remaining fuels alphabetically by `name`
+- Station `url` field shown as "Izvor cijena" link at bottom of detail screen
 
 ### 3.6 Data Layer
 
@@ -94,6 +98,29 @@ Three changes to the fuel price prediction app:
 - **StationRepository** — caches station data in SQLite, provides CRUD
 - **StationsCubit** — manages state for station list and detail screens
 - New SQLite tables: `stations`, `station_fuels`
+
+### 3.7 Database Migration
+
+- Bump database version from 1 to 2
+- Add `onUpgrade` handler that creates `stations` and `station_fuels` tables
+- New tables:
+  - `stations`: id (TEXT PK), name (TEXT), url (TEXT), updated (TEXT)
+  - `station_fuels`: id (INTEGER PK AUTOINCREMENT), station_id (TEXT FK), name (TEXT), type (TEXT), price (REAL)
+
+### 3.8 Data Freshness & Caching
+
+- App fetches `station_prices.json` once per day (same logic as fuel_params — check last fetch timestamp)
+- Pull-to-refresh on StationListScreen forces immediate re-fetch
+- Station data cached in SQLite indefinitely (overwritten on each successful fetch)
+- **Empty state:** If no cached data and fetch fails, show "Nema podataka. Provjerite internetsku vezu." message
+- **Loading state:** Show spinner on first load
+
+### 3.9 StationsCubit Lifecycle
+
+- Created in `app.dart` alongside other cubits, provided via `MultiBlocProvider`
+- Uses same `Dio` instance as other services
+- Does NOT participate in `DataSyncOrchestrator` — fetches independently
+- Station data fetched lazily: only when user first navigates to Postaje tab (not on app startup)
 
 ## 4. GitHub Repository Setup — `jurajnakic/fuel-price-app`
 
@@ -139,7 +166,11 @@ fuel-price-app/
 
 - Update `remote_config_service.dart` URL from `iersegovic/fuel-price-app` to `jurajnakic/fuel-price-app`
 
-## 5. What Does NOT Change
+## 5. Version
+
+- Bump app version from `1.0.0` to `2.0.0` (significant feature addition + rebrand)
+
+## 6. What Does NOT Change
 
 - Formula engine and price prediction logic
 - FuelDetailPager with chart and swipe navigation
