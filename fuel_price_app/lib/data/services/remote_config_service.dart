@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../../models/fuel_params.dart';
 
@@ -12,7 +13,13 @@ class RemoteConfigService {
   Future<FuelParams?> fetchParams() async {
     try {
       final response = await dio.get(_configUrl);
-      final data = response.data as Map<String, dynamic>;
+      // raw.githubusercontent.com returns text/plain, so Dio may not auto-decode
+      final Map<String, dynamic> data;
+      if (response.data is String) {
+        data = jsonDecode(response.data as String) as Map<String, dynamic>;
+      } else {
+        data = response.data as Map<String, dynamic>;
+      }
       return FuelParams.fromJson(data);
     } catch (_) {
       return null;

@@ -1,4 +1,5 @@
 import 'package:bloc/bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fuel_price_app/data/repositories/station_repository.dart';
 import 'package:fuel_price_app/data/services/station_price_service.dart';
 import 'package:fuel_price_app/models/station.dart';
@@ -40,22 +41,28 @@ class StationsCubit extends Cubit<StationsState> {
   }
 
   Future<void> load() async {
+    debugPrint('StationsCubit: load() called');
     _safeEmit(state.copyWith(isLoading: true, hasError: false));
 
     try {
       final shouldFetch = await repository.shouldFetch();
+      debugPrint('StationsCubit: shouldFetch=$shouldFetch');
 
       if (shouldFetch) {
         final response = await service.fetchStations();
+        debugPrint('StationsCubit: fetch response=${response != null ? "${response.stations.length} stations" : "null"}');
         if (response != null) {
           await repository.saveStations(response);
           await repository.recordFetchTime();
+          debugPrint('StationsCubit: saved to DB');
         }
       }
 
       final stations = await repository.getStations();
+      debugPrint('StationsCubit: loaded ${stations.length} stations from DB');
       _safeEmit(state.copyWith(isLoading: false, stations: stations, hasError: stations.isEmpty));
-    } catch (_) {
+    } catch (e) {
+      debugPrint('StationsCubit: ERROR $e');
       _safeEmit(state.copyWith(isLoading: false, hasError: true));
     }
   }

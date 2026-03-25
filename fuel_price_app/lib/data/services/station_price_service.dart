@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../models/station.dart';
 
 class StationPriceService {
@@ -11,9 +13,18 @@ class StationPriceService {
   Future<StationsResponse?> fetchStations() async {
     try {
       final response = await dio.get(_url);
-      final data = response.data as Map<String, dynamic>;
-      return StationsResponse.fromJson(data);
-    } catch (_) {
+      // raw.githubusercontent.com returns text/plain, so Dio may not auto-decode
+      final Map<String, dynamic> data;
+      if (response.data is String) {
+        data = jsonDecode(response.data as String) as Map<String, dynamic>;
+      } else {
+        data = response.data as Map<String, dynamic>;
+      }
+      final result = StationsResponse.fromJson(data);
+      debugPrint('StationPriceService: loaded ${result.stations.length} stations');
+      return result;
+    } catch (e) {
+      debugPrint('StationPriceService: ERROR $e');
       return null;
     }
   }
