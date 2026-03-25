@@ -271,7 +271,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
                   : brightness);
 
           return MaterialApp(
-            title: 'Cijene Goriva',
+            title: 'FuelLens',
             theme: lightTheme,
             darkTheme: darkTheme,
             themeMode: settingsState.themeMode,
