@@ -1,8 +1,8 @@
 """
-scrape_stations.py — Scrapes fuel prices from 5 Croatian gas station websites.
+scrape_stations.py — Scrapes fuel prices from cijenegoriva.info aggregator.
 
-Each station has its own scraper function. CSS selectors are intentional
-placeholders — tune them per-station after inspecting the live HTML structure.
+This site lists current fuel prices for all Croatian fuel companies in a
+simple static HTML page, replacing the need for per-station scrapers.
 Output is written to config/station_prices.json relative to the repo root.
 """
 
@@ -32,6 +32,8 @@ HEADERS = {
     )
 }
 REQUEST_TIMEOUT = 15  # seconds
+
+SOURCE_URL = "https://www.cijenegoriva.info/"
 
 
 def fetch(url: str) -> BeautifulSoup:
@@ -80,13 +82,16 @@ def parse_price(text: str) -> float | None:
 # Maps fragments of a fuel name (lowercase) to a standardised type key.
 # Evaluated in order — first match wins.
 FUEL_TYPE_MAP = [
-    (["eurosuper 100", "super 100", "es100", "v-power racing", "ultimate 102"], "es100"),
-    (["eurosuper 95", "super 95", "es95", "e10", "unleaded 95"], "es95"),
-    (["premium dizel", "premium diesel", "ultimate diesel", "v-power diesel", "excellium diesel"], "premium_diesel"),
-    (["eurodizel", "euro diesel", "eurodisel", "diesel+", "dizel+"], "eurodizel"),
-    (["dizel", "diesel"], "eurodizel"),           # generic fallback
-    (["lpg", "autoplin", "ukapljeni"], "lpg"),
-    (["unp", "plin"], "lpg"),
+    (["eurosuper 100", "super 100", "es100"], "es100"),
+    (["premium eurosuper 95", "premium eurosuper95"], "premium_95"),
+    (["eurosuper 95", "super 95", "es95"], "es95"),
+    (["premium eurodizel", "premium eurodisel", "premium dizel",
+      "premium diesel"], "premium_diesel"),
+    (["eurodizel", "euro diesel", "eurodisel"], "eurodizel"),
+    (["autoplin", "lpg", "ukapljeni"], "lpg"),
+    (["loz ulje", "loživo ulje", "lož ulje"], "heating_oil"),
+    (["plavi dizel", "plavi diesel"], "blue_diesel"),
+    (["dizel", "diesel"], "eurodizel"),  # generic fallback
     (["lng", "cng", "prirodni plin"], "cng"),
     (["ad blue", "adblue"], "adblue"),
 ]
@@ -109,205 +114,144 @@ def make_fuel_entry(name: str, price: float) -> dict:
     }
 
 
+def make_company_id(name: str) -> str:
+    """Generate a lowercase ID from company name.
+
+    Examples: "INA" → "ina", "Lukoil Croatia" → "lukoil_croatia"
+    """
+    cid = name.strip().lower()
+    cid = re.sub(r"[^a-z0-9]+", "_", cid)
+    cid = cid.strip("_")
+    return cid
+
+
 # ---------------------------------------------------------------------------
-# Per-station scraper functions
+# Main scraper
 # ---------------------------------------------------------------------------
 
-def scrape_ina() -> dict:
+def scrape_cijenegoriva() -> list[dict]:
     """
-    Scrape INA fuel prices.
-    URL: https://www.ina.hr/kupci/cijene-goriva/
-    HTML hint: look for a table or structured list of fuel rows.
-    Tune: TABLE_SELECTOR, NAME_SELECTOR, PRICE_SELECTOR after inspecting HTML.
+    Scrape cijenegoriva.info for all Croatian fuel company prices.
+
+    Returns a list of station dicts in the standard format.
     """
-    url = "https://www.ina.hr/kupci/cijene-goriva/"
-    soup = fetch(url)
+    soup = fetch(SOURCE_URL)
 
-    fuels = []
+    # --- Extract validity date ---
+    validity_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    validity_match = re.search(
+        r"CIJENE\s+vrijede\s+od\s+(\d{1,2})\.(\d{1,2})\.(\d{4})\.\s+do\s+(\d{1,2})\.(\d{1,2})\.(\d{4})\.",
+        soup.get_text(),
+        re.IGNORECASE,
+    )
+    if validity_match:
+        # Use the "from" date as the updated date
+        day, month, year = validity_match.group(1), validity_match.group(2), validity_match.group(3)
+        validity_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        print(f"  Validity period: {validity_match.group(0)}")
+    else:
+        print("  WARNING: Could not find validity date, using today's date")
 
-    # --- TUNE BELOW: adjust selectors to match actual HTML ---
-    # Common pattern: rows in a pricing table
-    rows = soup.select("table.price-table tr, .cijene-goriva tr, .fuel-price-row")
+    # --- Parse fuel sections ---
+    # Each fuel type is in a <strong> tag followed by a <table>
+    # All content is inside div.tr-details.content
+    content_div = soup.select_one("div.tr-details.content")
+    if content_div is None:
+        # Fallback: search the whole page
+        content_div = soup
 
-    for row in rows:
-        name_el = row.select_one("td:first-child, .fuel-name, th")
-        price_el = row.select_one("td:last-child, .fuel-price")
-        if not name_el or not price_el:
+    # Build: company_name → list of fuel entries
+    companies: dict[str, list[dict]] = {}
+
+    # Find all <strong> elements that contain fuel type names
+    strong_tags = content_div.find_all("strong")
+
+    for strong in strong_tags:
+        fuel_name = strong.get_text(strip=True)
+        if not fuel_name:
             continue
-        name = name_el.get_text(strip=True)
-        price = parse_price(price_el.get_text(strip=True))
-        if name and price:
-            fuels.append(make_fuel_entry(name, price))
 
-    return {
-        "id": "ina",
-        "name": "INA",
-        "url": url,
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "fuels": fuels,
-    }
-
-
-def scrape_tifon() -> dict:
-    """
-    Scrape Tifon fuel prices.
-    URL: https://www.tifon.hr/hr/goriva/cijene-goriva/
-    HTML hint: likely a table or div-based price list.
-    Tune: TABLE_SELECTOR, NAME_SELECTOR, PRICE_SELECTOR after inspecting HTML.
-    """
-    url = "https://www.tifon.hr/hr/goriva/cijene-goriva/"
-    soup = fetch(url)
-
-    fuels = []
-
-    # --- TUNE BELOW ---
-    rows = soup.select(".price-list tr, .fuel-prices tr, table tr")
-
-    for row in rows:
-        cells = row.select("td")
-        if len(cells) < 2:
+        # Only process known fuel types
+        fuel_type = classify_fuel(fuel_name)
+        if fuel_type == "other":
             continue
-        name = cells[0].get_text(strip=True)
-        price = parse_price(cells[-1].get_text(strip=True))
-        if name and price:
-            fuels.append(make_fuel_entry(name, price))
 
-    return {
-        "id": "tifon",
-        "name": "Tifon",
-        "url": url,
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "fuels": fuels,
-    }
-
-
-def scrape_crodux() -> dict:
-    """
-    Scrape Crodux fuel prices.
-    URL: https://www.crodux-derivati.hr/maloprodaja/cijene-goriva
-    HTML hint: may use a custom component or table.
-    Tune: TABLE_SELECTOR, NAME_SELECTOR, PRICE_SELECTOR after inspecting HTML.
-    """
-    url = "https://www.crodux-derivati.hr/maloprodaja/cijene-goriva"
-    soup = fetch(url)
-
-    fuels = []
-
-    # --- TUNE BELOW ---
-    rows = soup.select(".price-table tr, .cijene tr, table.goriva tr")
-
-    for row in rows:
-        cells = row.select("td")
-        if len(cells) < 2:
+        # Find the next <table> after this <strong>
+        # Walk through siblings of the parent element
+        table = None
+        parent = strong.parent
+        if parent is None:
             continue
-        name = cells[0].get_text(strip=True)
-        price = parse_price(cells[-1].get_text(strip=True))
-        if name and price:
-            fuels.append(make_fuel_entry(name, price))
 
-    return {
-        "id": "crodux",
-        "name": "Crodux",
-        "url": url,
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "fuels": fuels,
-    }
+        # The table might be a sibling of the parent <p> element
+        for sibling in parent.find_next_siblings():
+            if sibling.name == "table":
+                table = sibling
+                break
+            # If we hit another <p> with a <strong>, stop looking
+            if sibling.name == "p" and sibling.find("strong"):
+                break
 
+        # Also try: table might be directly after the strong within same parent
+        if table is None:
+            table = strong.find_next("table")
 
-def scrape_petrol() -> dict:
-    """
-    Scrape Petrol fuel prices.
-    URL: https://www.petrol.hr/gorivo/cjenik
-    HTML hint: Petrol Slovenia also operates in Croatia; the page may be JS-heavy.
-    Tune: TABLE_SELECTOR, NAME_SELECTOR, PRICE_SELECTOR after inspecting HTML.
-    """
-    url = "https://www.petrol.hr/gorivo/cjenik"
-    soup = fetch(url)
-
-    fuels = []
-
-    # --- TUNE BELOW ---
-    rows = soup.select(".price-list tr, .cjenik tr, table tr")
-
-    for row in rows:
-        cells = row.select("td")
-        if len(cells) < 2:
+        if table is None:
+            print(f"  WARNING: No table found for fuel type '{fuel_name}'")
             continue
-        name = cells[0].get_text(strip=True)
-        price = parse_price(cells[-1].get_text(strip=True))
-        if name and price:
-            fuels.append(make_fuel_entry(name, price))
 
-    return {
-        "id": "petrol",
-        "name": "Petrol",
-        "url": url,
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "fuels": fuels,
-    }
+        rows = table.find_all("tr")
+        row_count = 0
+        for row in rows:
+            cells = row.find_all("td")
+            if len(cells) < 2:
+                continue
 
+            company_name = cells[0].get_text(strip=True)
+            price_text = cells[1].get_text(strip=True)
 
-def scrape_shell() -> dict:
-    """
-    Scrape Shell fuel prices.
-    URL: https://www.shell.hr/motoristi/shell-goriva/cijena-goriva.html
-    HTML hint: Shell HR typically lists prices in a styled table or definition list.
-    Tune: TABLE_SELECTOR, NAME_SELECTOR, PRICE_SELECTOR after inspecting HTML.
-    """
-    url = "https://www.shell.hr/motoristi/shell-goriva/cijena-goriva.html"
-    soup = fetch(url)
+            if not company_name:
+                continue
 
-    fuels = []
+            price = parse_price(price_text)
+            if price is None:
+                continue
 
-    # --- TUNE BELOW ---
-    rows = soup.select(".price-table tr, .fuel-list tr, table tr")
+            if company_name not in companies:
+                companies[company_name] = []
 
-    for row in rows:
-        cells = row.select("td")
-        if len(cells) < 2:
-            continue
-        name = cells[0].get_text(strip=True)
-        price = parse_price(cells[-1].get_text(strip=True))
-        if name and price:
-            fuels.append(make_fuel_entry(name, price))
+            companies[company_name].append(make_fuel_entry(fuel_name, price))
+            row_count += 1
 
-    return {
-        "id": "shell",
-        "name": "Shell",
-        "url": url,
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "fuels": fuels,
-    }
+        print(f"  {fuel_name} ({fuel_type}): {row_count} companies")
+
+    # --- Transform to station list ---
+    stations = []
+    for company_name, fuels in sorted(companies.items()):
+        station = {
+            "id": make_company_id(company_name),
+            "name": company_name,
+            "url": SOURCE_URL,
+            "updated": validity_date,
+            "fuels": fuels,
+        }
+        stations.append(station)
+
+    return stations
 
 
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 
-SCRAPERS = [
-    scrape_ina,
-    scrape_tifon,
-    scrape_crodux,
-    scrape_petrol,
-    scrape_shell,
-]
-
-
 def run() -> None:
-    stations = []
-    errors = []
+    print(f"Scraping {SOURCE_URL}...")
 
-    for scraper in SCRAPERS:
-        name = scraper.__name__.replace("scrape_", "").upper()
-        print(f"Scraping {name}...", end=" ", flush=True)
-        try:
-            result = scraper()
-            stations.append(result)
-            fuel_count = len(result["fuels"])
-            print(f"OK ({fuel_count} fuel(s) found)")
-        except Exception as exc:  # noqa: BLE001
-            print(f"FAILED — {exc}")
-            errors.append((name, str(exc)))
+    try:
+        stations = scrape_cijenegoriva()
+    except Exception as exc:  # noqa: BLE001
+        print(f"FAILED — {exc}", file=sys.stderr)
+        sys.exit(1)
 
     output = {
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -316,16 +260,12 @@ def run() -> None:
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\nWrote {len(stations)} station(s) to {OUTPUT_FILE}")
 
-    if errors:
-        print(f"\n{len(errors)} station(s) failed:")
-        for station_name, msg in errors:
-            print(f"  {station_name}: {msg}")
-        # Exit with a non-zero code so the CI step is visible as a warning,
-        # but still allow the commit step to run (partially updated data is
-        # better than no data). Change to sys.exit(1) to make CI fail hard.
-        sys.exit(0)
+    total_fuels = sum(len(s["fuels"]) for s in stations)
+    print(f"\nWrote {len(stations)} company/station(s) ({total_fuels} fuel entries) to {OUTPUT_FILE}")
+
+    if not stations:
+        print("\nWARNING: No stations found. The page structure may have changed.")
 
 
 if __name__ == "__main__":
