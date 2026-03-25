@@ -50,7 +50,7 @@ class StationRepository {
             .map((f) => StationFuel(
                   name: f['name'] as String,
                   type: f['type'] as String,
-                  price: f['price'] as double,
+                  price: (f['price'] as num).toDouble(),
                 ))
             .toList(),
       ));
@@ -61,8 +61,12 @@ class StationRepository {
   Future<bool> shouldFetch() async {
     final rows = await db.query('station_fetch_time');
     if (rows.isEmpty) return true;
-    final lastFetch = DateTime.parse(rows.first['fetched_at'] as String);
-    return DateTime.now().difference(lastFetch).inHours >= 24;
+    try {
+      final lastFetch = DateTime.parse(rows.first['fetched_at'] as String);
+      return DateTime.now().difference(lastFetch).inHours >= 24;
+    } catch (_) {
+      return true; // corrupted timestamp → force re-fetch
+    }
   }
 
   Future<void> recordFetchTime() async {

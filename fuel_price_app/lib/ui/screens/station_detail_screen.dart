@@ -49,9 +49,13 @@ class StationDetailScreen extends StatelessWidget {
           if (station.url.isNotEmpty)
             TextButton.icon(
               onPressed: () async {
-                final uri = Uri.parse(station.url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                try {
+                  final uri = Uri.parse(station.url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                } catch (_) {
+                  // Silently ignore malformed URLs or launch failures
                 }
               },
               icon: const Icon(Icons.open_in_new, size: 18),

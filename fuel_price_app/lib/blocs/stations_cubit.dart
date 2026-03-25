@@ -35,8 +35,12 @@ class StationsCubit extends Cubit<StationsState> {
     required this.repository,
   }) : super(const StationsState());
 
+  void _safeEmit(StationsState newState) {
+    if (!isClosed) emit(newState);
+  }
+
   Future<void> load() async {
-    emit(state.copyWith(isLoading: true, hasError: false));
+    _safeEmit(state.copyWith(isLoading: true, hasError: false));
 
     try {
       final shouldFetch = await repository.shouldFetch();
@@ -50,14 +54,14 @@ class StationsCubit extends Cubit<StationsState> {
       }
 
       final stations = await repository.getStations();
-      emit(state.copyWith(isLoading: false, stations: stations, hasError: stations.isEmpty));
+      _safeEmit(state.copyWith(isLoading: false, stations: stations, hasError: stations.isEmpty));
     } catch (_) {
-      emit(state.copyWith(isLoading: false, hasError: true));
+      _safeEmit(state.copyWith(isLoading: false, hasError: true));
     }
   }
 
   Future<void> refresh() async {
-    emit(state.copyWith(isLoading: true, hasError: false));
+    _safeEmit(state.copyWith(isLoading: true, hasError: false));
 
     try {
       final response = await service.fetchStations();
@@ -67,9 +71,9 @@ class StationsCubit extends Cubit<StationsState> {
       }
 
       final stations = await repository.getStations();
-      emit(state.copyWith(isLoading: false, stations: stations, hasError: stations.isEmpty));
+      _safeEmit(state.copyWith(isLoading: false, stations: stations, hasError: stations.isEmpty));
     } catch (_) {
-      emit(state.copyWith(isLoading: false, hasError: true));
+      _safeEmit(state.copyWith(isLoading: false, hasError: true));
     }
   }
 }

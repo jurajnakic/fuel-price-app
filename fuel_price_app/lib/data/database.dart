@@ -100,7 +100,7 @@ class AppDatabase {
 
   Future<void> _createStationTables(Database db) async {
     await db.execute('''
-      CREATE TABLE stations (
+      CREATE TABLE IF NOT EXISTS stations (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         url TEXT NOT NULL,
@@ -108,7 +108,7 @@ class AppDatabase {
       )
     ''');
     await db.execute('''
-      CREATE TABLE station_fuels (
+      CREATE TABLE IF NOT EXISTS station_fuels (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         station_id TEXT NOT NULL,
         name TEXT NOT NULL,
@@ -118,7 +118,7 @@ class AppDatabase {
       )
     ''');
     await db.execute('''
-      CREATE TABLE station_fetch_time (
+      CREATE TABLE IF NOT EXISTS station_fetch_time (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         fetched_at TEXT NOT NULL
       )
