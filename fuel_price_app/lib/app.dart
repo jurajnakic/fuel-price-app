@@ -312,22 +312,32 @@ class _AppHome extends StatefulWidget {
 class _AppHomeState extends State<_AppHome> {
   int _currentIndex = 0;
   bool _stationsTabVisited = false;
-
-  final _screens = const [
-    FuelListScreen(),
-    StationListScreen(),
-    SettingsScreen(),
-  ];
+  late final PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDisclaimerIfNeeded(context);
     });
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   void _onTabSelected(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onPageChanged(int index) {
     setState(() => _currentIndex = index);
     // Lazy load station data only when Postaje tab is first visited
     if (index == 1 && !_stationsTabVisited) {
@@ -339,9 +349,14 @@ class _AppHomeState extends State<_AppHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: _onPageChanged,
+        children: const [
+          FuelListScreen(),
+          StationListScreen(),
+          SettingsScreen(),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -350,7 +365,7 @@ class _AppHomeState extends State<_AppHome> {
           NavigationDestination(
             icon: Icon(Icons.trending_up_outlined),
             selectedIcon: Icon(Icons.trending_up),
-            label: 'Predikcije',
+            label: 'Procjena',
           ),
           NavigationDestination(
             icon: Icon(Icons.local_gas_station_outlined),

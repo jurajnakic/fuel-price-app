@@ -15,7 +15,7 @@ class FuelListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Predikcije'),
+        title: const Text('Procjena'),
       ),
       body: BlocConsumer<DataSyncCubit, DataSyncState>(
         listener: _syncListener,
