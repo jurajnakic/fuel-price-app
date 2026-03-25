@@ -1,19 +1,312 @@
 {
-  "updated": "2026-03-25T15:56:33Z",
+  "updated": "2026-03-25T16:35:19Z",
   "stations": [
     {
+      "id": "adriaoil",
+      "name": "AdriaOil",
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Premium Eurosuper 95 (class, ecto...)",
+          "type": "premium_95",
+          "price": 1.81
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        },
+        {
+          "name": "Premium eurodizel (class, ECTO ....)",
+          "type": "premium_diesel",
+          "price": 2.03
+        }
+      ]
+    },
+    {
+      "id": "attendo_centar_dugo_selo",
+      "name": "Attendo centar (Dugo Selo)",
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        }
+      ]
+    },
+    {
+      "id": "crodux_derivati_petrol",
+      "name": "Crodux Derivati (Petrol)",
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Eurosuper 100",
+          "type": "es100",
+          "price": 2.12
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        },
+        {
+          "name": "Premium eurodizel (class, ECTO ....)",
+          "type": "premium_diesel",
+          "price": 2.03
+        },
+        {
+          "name": "Autoplin",
+          "type": "lpg",
+          "price": 1.24
+        },
+        {
+          "name": "Plavi dizel",
+          "type": "blue_diesel",
+          "price": 1.19
+        }
+      ]
+    },
+    {
       "id": "ina",
-      "name": "INA",
-      "url": "https://www.ina.hr/kupci/cijene-goriva/",
-      "updated": "2026-03-25",
-      "fuels": []
+      "name": "Ina",
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Premium Eurosuper 95 (class, ecto...)",
+          "type": "premium_95",
+          "price": 1.81
+        },
+        {
+          "name": "Eurosuper 100",
+          "type": "es100",
+          "price": 2.12
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        },
+        {
+          "name": "Premium eurodizel (class, ECTO ....)",
+          "type": "premium_diesel",
+          "price": 2.03
+        },
+        {
+          "name": "Autoplin",
+          "type": "lpg",
+          "price": 1.26
+        },
+        {
+          "name": "Lož ulje",
+          "type": "heating_oil",
+          "price": 1.42
+        },
+        {
+          "name": "Plavi dizel",
+          "type": "blue_diesel",
+          "price": 1.19
+        }
+      ]
+    },
+    {
+      "id": "lukoil",
+      "name": "Lukoil",
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Premium Eurosuper 95 (class, ecto...)",
+          "type": "premium_95",
+          "price": 1.78
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        },
+        {
+          "name": "Premium eurodizel (class, ECTO ....)",
+          "type": "premium_diesel",
+          "price": 1.89
+        },
+        {
+          "name": "Autoplin",
+          "type": "lpg",
+          "price": 1.25
+        },
+        {
+          "name": "Plavi dizel",
+          "type": "blue_diesel",
+          "price": 1.19
+        }
+      ]
+    },
+    {
+      "id": "mitea_samobor",
+      "name": "Mitea (Samobor)",
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        },
+        {
+          "name": "Autoplin",
+          "type": "lpg",
+          "price": 1.17
+        }
+      ]
+    },
+    {
+      "id": "petrol",
+      "name": "Petrol",
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Eurosuper 100",
+          "type": "es100",
+          "price": 2.12
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        },
+        {
+          "name": "Premium eurodizel (class, ECTO ....)",
+          "type": "premium_diesel",
+          "price": 2.03
+        },
+        {
+          "name": "Autoplin",
+          "type": "lpg",
+          "price": 1.24
+        },
+        {
+          "name": "Lož ulje",
+          "type": "heating_oil",
+          "price": 1.47
+        },
+        {
+          "name": "Plavi dizel",
+          "type": "blue_diesel",
+          "price": 1.19
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "name": "Shell",
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Eurosuper 100",
+          "type": "es100",
+          "price": 2.198
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        },
+        {
+          "name": "Premium eurodizel (class, ECTO ....)",
+          "type": "premium_diesel",
+          "price": 2.139
+        },
+        {
+          "name": "Autoplin",
+          "type": "lpg",
+          "price": 1.095
+        },
+        {
+          "name": "Plavi dizel",
+          "type": "blue_diesel",
+          "price": 1.19
+        }
+      ]
     },
     {
       "id": "tifon",
       "name": "Tifon",
-      "url": "https://www.tifon.hr/hr/goriva/cijene-goriva/",
-      "updated": "2026-03-25",
-      "fuels": []
+      "url": "https://www.cijenegoriva.info/",
+      "updated": "2026-03-24",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.62
+        },
+        {
+          "name": "Eurosuper 100",
+          "type": "es100",
+          "price": 2.3
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.73
+        },
+        {
+          "name": "Premium eurodizel (class, ECTO ....)",
+          "type": "premium_diesel",
+          "price": 2.25
+        },
+        {
+          "name": "Autoplin",
+          "type": "lpg",
+          "price": 1.24
+        }
+      ]
     }
   ]
 }
