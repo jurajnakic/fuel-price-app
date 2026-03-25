@@ -1,4 +1,19 @@
 {
-  "updated": "2026-03-25T08:00:00Z",
-  "stations": []
+  "updated": "2026-03-25T15:56:33Z",
+  "stations": [
+    {
+      "id": "ina",
+      "name": "INA",
+      "url": "https://www.ina.hr/kupci/cijene-goriva/",
+      "updated": "2026-03-25",
+      "fuels": []
+    },
+    {
+      "id": "tifon",
+      "name": "Tifon",
+      "url": "https://www.tifon.hr/hr/goriva/cijene-goriva/",
+      "updated": "2026-03-25",
+      "fuels": []
+    }
+  ]
 }
