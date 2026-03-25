@@ -311,6 +311,7 @@ class _AppHome extends StatefulWidget {
 
 class _AppHomeState extends State<_AppHome> {
   int _currentIndex = 0;
+  bool _stationsTabVisited = false;
 
   final _screens = const [
     FuelListScreen(),
@@ -326,6 +327,15 @@ class _AppHomeState extends State<_AppHome> {
     });
   }
 
+  void _onTabSelected(int index) {
+    setState(() => _currentIndex = index);
+    // Lazy load station data only when Postaje tab is first visited
+    if (index == 1 && !_stationsTabVisited) {
+      _stationsTabVisited = true;
+      context.read<StationsCubit>().load();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -335,9 +345,7 @@ class _AppHomeState extends State<_AppHome> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
-        },
+        onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.trending_up_outlined),

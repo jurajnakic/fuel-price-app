@@ -29,7 +29,6 @@ class StationsState {
 class StationsCubit extends Cubit<StationsState> {
   final StationPriceService service;
   final StationRepository repository;
-  bool _loaded = false;
 
   StationsCubit({
     required this.service,
@@ -51,7 +50,6 @@ class StationsCubit extends Cubit<StationsState> {
       }
 
       final stations = await repository.getStations();
-      _loaded = true;
       emit(state.copyWith(isLoading: false, stations: stations, hasError: stations.isEmpty));
     } catch (_) {
       emit(state.copyWith(isLoading: false, hasError: true));
