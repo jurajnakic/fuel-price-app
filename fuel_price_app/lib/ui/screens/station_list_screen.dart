@@ -15,7 +15,16 @@ class _StationListScreenState extends State<StationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cijene na postajama')),
+      appBar: AppBar(
+        title: const Text('Cijene na postajama'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Osvježi',
+            onPressed: () => context.read<StationsCubit>().refresh(),
+          ),
+        ],
+      ),
       body: BlocBuilder<StationsCubit, StationsState>(
         builder: (context, state) {
           if (state.isLoading && state.stations.isEmpty) {
@@ -40,30 +49,28 @@ class _StationListScreenState extends State<StationListScreen> {
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: () => context.read<StationsCubit>().refresh(),
-            child: ReorderableListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: state.stations.length,
-              onReorder: (oldIndex, newIndex) {
-                context.read<StationsCubit>().reorder(oldIndex, newIndex);
-              },
-              proxyDecorator: (child, index, animation) {
-                return Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.transparent,
-                  child: child,
-                );
-              },
-              itemBuilder: (context, index) {
-                final station = state.stations[index];
-                return _StationTile(
-                  key: ValueKey(station.id),
-                  station: station,
-                );
-              },
-            ),
+          return ReorderableListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: state.stations.length,
+            onReorder: (oldIndex, newIndex) {
+              context.read<StationsCubit>().reorder(oldIndex, newIndex);
+            },
+            proxyDecorator: (child, index, animation) {
+              return Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.transparent,
+                child: child,
+              );
+            },
+            itemBuilder: (context, index) {
+              final station = state.stations[index];
+              return _StationTile(
+                key: ValueKey(station.id),
+                station: station,
+                index: index,
+              );
+            },
           );
         },
       ),
@@ -73,7 +80,8 @@ class _StationListScreenState extends State<StationListScreen> {
 
 class _StationTile extends StatelessWidget {
   final Station station;
-  const _StationTile({super.key, required this.station});
+  final int index;
+  const _StationTile({super.key, required this.station, required this.index});
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +128,13 @@ class _StationTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 20),
+                ReorderableDragStartListener(
+                  index: index,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(Icons.drag_handle, color: cs.onSurfaceVariant, size: 20),
+                  ),
+                ),
               ],
             ),
           ),
