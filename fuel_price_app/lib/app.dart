@@ -123,18 +123,23 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         await _recalculatePredictions();
         await _fuelListCubit.load();
       } else {
-        // First launch — try sync, if fails seed demo data for testing
+        // First launch — sync real data from APIs
         await _fuelListCubit.load();
         await _syncCubit.sync();
 
-        // If sync failed (no data), seed demo data so app is usable
         final afterSync = await _priceRepo.getOilPrices('BZ=F', days: 30);
-        if (afterSync.isEmpty) {
-          await _seedDemoData();
+        if (afterSync.isNotEmpty) {
           _syncCubit.setHasData(true);
           await _recalculatePredictions();
           await _fuelListCubit.load();
         }
+        // NOTE: Uncomment below to seed demo data when APIs are unavailable
+        // if (afterSync.isEmpty) {
+        //   await _seedDemoData();
+        //   _syncCubit.setHasData(true);
+        //   await _recalculatePredictions();
+        //   await _fuelListCubit.load();
+        // }
       }
 
       // Sync remote config

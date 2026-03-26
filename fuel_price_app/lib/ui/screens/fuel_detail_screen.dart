@@ -292,14 +292,32 @@ class _PeriodSelector extends StatelessWidget {
   }
 }
 
-class _PriceChart extends StatelessWidget {
+class _PriceChart extends StatefulWidget {
   final List<FuelPrice> prices;
 
   const _PriceChart({required this.prices});
 
   @override
+  State<_PriceChart> createState() => _PriceChartState();
+}
+
+class _PriceChartState extends State<_PriceChart> {
+  final TransformationController _transformController = TransformationController();
+
+  @override
+  void dispose() {
+    _transformController.dispose();
+    super.dispose();
+  }
+
+  void _resetZoom() {
+    _transformController.value = Matrix4.identity();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final prices = widget.prices;
 
     if (prices.isEmpty) return const SizedBox();
 
@@ -313,85 +331,116 @@ class _PriceChart extends StatelessWidget {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: cs.surfaceContainer,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-        child: LineChart(
-          LineChartData(
-            gridData: FlGridData(
-              show: true,
-              drawVerticalLine: false,
-              horizontalInterval: _calculateInterval(maxY - minY),
-              getDrawingHorizontalLine: (value) => FlLine(
-                color: cs.outlineVariant.withValues(alpha: 0.3),
-                strokeWidth: 1,
-              ),
-            ),
-            titlesData: FlTitlesData(
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  interval: (spots.length / 4).ceilToDouble(),
-                  getTitlesWidget: (value, meta) {
-                    final idx = value.toInt();
-                    if (idx < 0 || idx >= prices.length) return const SizedBox();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        DateFormat('d.M.').format(prices[idx].date),
-                        style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
+            child: InteractiveViewer(
+              transformationController: _transformController,
+              minScale: 1.0,
+              maxScale: 5.0,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: _calculateInterval(maxY - minY),
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: cs.outlineVariant.withValues(alpha: 0.3),
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: (spots.length / 4).ceilToDouble(),
+                        getTitlesWidget: (value, meta) {
+                          final idx = value.toInt();
+                          if (idx < 0 || idx >= prices.length) return const SizedBox();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              DateFormat('d.M.').format(prices[idx].date),
+                              style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: true,
-                  reservedSize: 44,
-                  interval: _calculateInterval(maxY - minY),
-                  getTitlesWidget: (value, meta) => Text(
-                    value.toStringAsFixed(2),
-                    style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 44,
+                        interval: _calculateInterval(maxY - minY),
+                        getTitlesWidget: (value, meta) => Text(
+                          value.toStringAsFixed(2),
+                          style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+                        ),
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minY: minY,
+                  maxY: maxY,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      curveSmoothness: 0.2,
+                      color: cs.primary,
+                      barWidth: 2.5,
+                      isStrokeCapRound: true,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: cs.primary.withValues(alpha: 0.08),
+                      ),
+                    ),
+                  ],
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          final idx = spot.spotIndex;
+                          final price = prices[idx];
+                          return LineTooltipItem(
+                            '${DateFormat('dd.MM.').format(price.date)}\n${price.roundedPrice.toStringAsFixed(2)} €',
+                            TextStyle(color: cs.onPrimaryContainer, fontSize: 12),
+                          );
+                        }).toList();
+                      },
+                    ),
                   ),
                 ),
               ),
             ),
-            borderData: FlBorderData(show: false),
-            minY: minY,
-            maxY: maxY,
-            lineBarsData: [
-              LineChartBarData(
-                spots: spots,
-                isCurved: true,
-                curveSmoothness: 0.2,
-                color: cs.primary,
-                barWidth: 2.5,
-                isStrokeCapRound: true,
-                dotData: const FlDotData(show: false),
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: cs.primary.withValues(alpha: 0.08),
+          ),
+          // Reset zoom button — only visible when zoomed in
+          Positioned(
+            top: 4,
+            right: 4,
+            child: ListenableBuilder(
+              listenable: _transformController,
+              builder: (context, child) {
+                final isZoomed = _transformController.value.getMaxScaleOnAxis() > 1.05;
+                return isZoomed ? child! : const SizedBox.shrink();
+              },
+              child: IconButton.filledTonal(
+                onPressed: _resetZoom,
+                icon: const Icon(Icons.zoom_out_map, size: 18),
+                tooltip: 'Poništi zum',
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(32, 32),
+                  padding: const EdgeInsets.all(4),
                 ),
-              ),
-            ],
-            lineTouchData: LineTouchData(
-              touchTooltipData: LineTouchTooltipData(
-                getTooltipItems: (touchedSpots) {
-                  return touchedSpots.map((spot) {
-                    final idx = spot.spotIndex;
-                    final price = prices[idx];
-                    return LineTooltipItem(
-                      '${DateFormat('dd.MM.').format(price.date)}\n${price.roundedPrice.toStringAsFixed(2)} €',
-                      TextStyle(color: cs.onPrimaryContainer, fontSize: 12),
-                    );
-                  }).toList();
-                },
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
