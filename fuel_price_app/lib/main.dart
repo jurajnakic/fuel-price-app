@@ -14,8 +14,8 @@ void main() async {
   final notificationService = NotificationService();
   await notificationService.init();
 
-  // Register background sync at 18:00 CET
-  await initBackgroundSync();
-
   runApp(FuelPriceApp(database: db));
+
+  // Register background sync after UI is up — non-blocking
+  initBackgroundSync();
 }
