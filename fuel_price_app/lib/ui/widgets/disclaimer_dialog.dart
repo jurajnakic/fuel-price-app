@@ -28,7 +28,7 @@ Future<void> showDisclaimerIfNeeded(BuildContext context) async {
             await prefs.setBool(_disclaimerKey, true);
             if (context.mounted) Navigator.pop(context);
           },
-          child: const Text('Razumijem'),
+          child: const Text('OK'),
         ),
       ],
     ),
