@@ -60,8 +60,8 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
 
     // Services
     _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
     ));
     _yahooService = YahooFinanceService(dio: _dio);
     _hnbService = HnbService(dio: _dio);

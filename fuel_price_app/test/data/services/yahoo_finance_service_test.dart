@@ -86,9 +86,21 @@ void main() {
     expect(prices.first.close, 71.0);
   });
 
-  test('falls back to CSV when v8 fails', () async {
-    const csvData = 'Date,Open,High,Low,Close,Adj Close,Volume\n'
-        '2026-03-10,71.5,72.0,70.8,71.2,71.2,100000\n';
+  test('falls back to next endpoint when first fails', () async {
+    final jsonData = {
+      'chart': {
+        'result': [
+          {
+            'timestamp': [1741564800],
+            'indicators': {
+              'quote': [
+                {'close': [71.2]}
+              ]
+            }
+          }
+        ]
+      }
+    };
 
     var callCount = 0;
     when(() => mockDio.get(
@@ -104,7 +116,7 @@ void main() {
         );
       }
       return Response(
-        data: csvData,
+        data: jsonData,
         statusCode: 200,
         requestOptions: RequestOptions(path: ''),
       );
@@ -113,7 +125,7 @@ void main() {
     final prices = await service.fetchHistoricalPrices('BZ=F', 14);
     expect(prices.length, 1);
     expect(prices.first.close, 71.2);
-    expect(callCount, 2); // v8 failed, then CSV succeeded
+    expect(callCount, 2);
   });
 
   test('empty v8 response returns empty list', () async {

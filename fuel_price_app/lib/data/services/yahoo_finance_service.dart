@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 class YahooFinancePrice {
   final DateTime date;
@@ -13,29 +14,47 @@ class YahooFinanceService {
 
   YahooFinanceService({Dio? dio}) : dio = dio ?? Dio();
 
+  static const _userAgent =
+      'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+
   /// Fetch historical closing prices for a symbol.
-  /// [symbol]: 'BZ=F' (Brent), 'RB=F' (RBOB), 'HO=F' (Heating Oil)
-  /// [days]: number of calendar days to look back
+  /// Tries multiple endpoints for resilience.
   Future<List<YahooFinancePrice>> fetchHistoricalPrices(String symbol, int days) async {
-    // Try v8 chart API first (no auth required), fall back to v7 CSV
-    try {
-      return await _fetchFromChartApi(symbol, days);
-    } catch (_) {
-      return await _fetchFromCsvApi(symbol, days);
+    // Try multiple endpoints — Yahoo rotates availability
+    final attempts = [
+      () => _fetchFromChartApi('query2.finance.yahoo.com', symbol, days),
+      () => _fetchFromChartApi('query1.finance.yahoo.com', symbol, days),
+      () => _fetchFromCsvApi(symbol, days),
+    ];
+
+    for (final attempt in attempts) {
+      try {
+        final result = await attempt();
+        if (result.isNotEmpty) {
+          debugPrint('YahooFinance: got ${result.length} prices for $symbol');
+          return result;
+        }
+      } catch (e) {
+        debugPrint('YahooFinance: attempt failed — $e');
+      }
     }
+
+    debugPrint('YahooFinance: all attempts failed for $symbol');
+    return [];
   }
 
   /// v8 chart API — JSON, no auth required
-  Future<List<YahooFinancePrice>> _fetchFromChartApi(String symbol, int days) async {
+  Future<List<YahooFinancePrice>> _fetchFromChartApi(String host, String symbol, int days) async {
     final response = await dio.get(
-      'https://query1.finance.yahoo.com/v8/finance/chart/$symbol',
+      'https://$host/v8/finance/chart/$symbol',
       queryParameters: {
         'range': '${days}d',
         'interval': '1d',
       },
-      options: Options(headers: {
-        'User-Agent': 'Mozilla/5.0',
-      }),
+      options: Options(
+        headers: {'User-Agent': _userAgent},
+        responseType: ResponseType.json,
+      ),
     );
 
     final data = response.data is String
@@ -43,15 +62,20 @@ class YahooFinanceService {
         : response.data;
 
     final result = data['chart']['result'][0];
-    final timestamps = (result['timestamp'] as List).cast<int>();
-    final closes = (result['indicators']['quote'][0]['close'] as List);
+    final timestamps = result['timestamp'] as List?;
+    if (timestamps == null || timestamps.isEmpty) return [];
+
+    final closes = result['indicators']['quote'][0]['close'] as List;
 
     final prices = <YahooFinancePrice>[];
     for (var i = 0; i < timestamps.length; i++) {
       final close = closes[i];
       if (close == null) continue;
       prices.add(YahooFinancePrice(
-        date: DateTime.fromMillisecondsSinceEpoch(timestamps[i] * 1000, isUtc: true),
+        date: DateTime.fromMillisecondsSinceEpoch(
+          (timestamps[i] as int) * 1000,
+          isUtc: true,
+        ),
         close: (close as num).toDouble(),
       ));
     }
@@ -73,12 +97,14 @@ class YahooFinanceService {
         'interval': '1d',
         'events': 'history',
       },
-      options: Options(headers: {
-        'User-Agent': 'Mozilla/5.0',
-      }),
+      options: Options(
+        headers: {'User-Agent': _userAgent},
+      ),
     );
 
-    return _parseCsv(response.data as String);
+    final body = response.data;
+    if (body is! String) throw FormatException('Expected CSV string, got ${body.runtimeType}');
+    return _parseCsv(body);
   }
 
   List<YahooFinancePrice> _parseCsv(String csv) {
