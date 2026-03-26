@@ -49,28 +49,34 @@ class _StationListScreenState extends State<StationListScreen> {
             );
           }
 
-          return ReorderableListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: state.stations.length,
-            onReorder: (oldIndex, newIndex) {
-              context.read<StationsCubit>().reorder(oldIndex, newIndex);
-            },
-            proxyDecorator: (child, index, animation) {
-              return Material(
-                elevation: 4,
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.transparent,
-                child: child,
-              );
-            },
-            itemBuilder: (context, index) {
-              final station = state.stations[index];
-              return _StationTile(
-                key: ValueKey(station.id),
-                station: station,
-                index: index,
-              );
-            },
+          return CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                sliver: SliverReorderableList(
+                  itemCount: state.stations.length,
+                  itemBuilder: (context, index) {
+                    final station = state.stations[index];
+                    return ReorderableDragStartListener(
+                      key: ValueKey(station.id),
+                      index: index,
+                      child: _StationTile(
+                        station: station,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => StationDetailScreen(station: station),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  onReorder: (oldIndex, newIndex) {
+                    context.read<StationsCubit>().reorder(oldIndex, newIndex);
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -80,25 +86,22 @@ class _StationListScreenState extends State<StationListScreen> {
 
 class _StationTile extends StatelessWidget {
   final Station station;
-  final int index;
-  const _StationTile({super.key, required this.station, required this.index});
+  final VoidCallback onTap;
+  const _StationTile({required this.station, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Card(
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         color: cs.surfaceContainer,
         margin: EdgeInsets.zero,
         child: InkWell(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => StationDetailScreen(station: station)),
-          ),
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -128,13 +131,7 @@ class _StationTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                ReorderableDragStartListener(
-                  index: index,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Icon(Icons.drag_handle, color: cs.onSurfaceVariant, size: 20),
-                  ),
-                ),
+                Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 20),
               ],
             ),
           ),
