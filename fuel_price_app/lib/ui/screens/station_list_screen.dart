@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fuel_price_app/blocs/stations_cubit.dart';
 import 'package:fuel_price_app/models/station.dart' show Station, formatDateCroatian;
-import 'station_detail_screen.dart';
+import 'station_detail_pager.dart';
 
 class StationListScreen extends StatefulWidget {
   const StationListScreen({super.key});
@@ -65,7 +65,7 @@ class _StationListScreenState extends State<StationListScreen> {
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => StationDetailScreen(station: station),
+                            builder: (_) => StationDetailPager(initialStation: station),
                           ),
                         ),
                       ),
