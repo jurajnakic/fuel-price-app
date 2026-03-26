@@ -53,42 +53,56 @@ class FuelDetailCubit extends Cubit<FuelDetailState> {
   }) : super(FuelDetailState(fuelType: fuelType));
 
   Future<void> load() async {
-    final ft = state.fuelType;
-    final current = await priceRepo.getLatestPrice(ft, prediction: false);
-    final predicted = await priceRepo.getLatestPrice(ft, prediction: true);
-    final history = await priceRepo.getPriceHistory(ft, days: state.chartDays);
+    try {
+      final ft = state.fuelType;
+      final current = await priceRepo.getLatestPrice(ft, prediction: false);
+      final predicted = await priceRepo.getLatestPrice(ft, prediction: true);
+      final history = await priceRepo.getPriceHistory(ft, days: state.chartDays);
 
-    final trend = predicted != null
-        ? trendIndicator(predicted.price, current?.price)
-        : null;
+      final trend = predicted != null
+          ? trendIndicator(predicted.price, current?.price)
+          : null;
 
-    final nextChange = nextPriceChangeDate(DateTime.now(), referenceDate, cycleDays);
+      final nextChange = nextPriceChangeDate(DateTime.now(), referenceDate, cycleDays);
 
-    emit(FuelDetailState(
-      fuelType: ft,
-      currentPrice: current?.roundedPrice,
-      predictedPrice: predicted?.roundedPrice,
-      trend: trend,
-      lastChangeDate: current?.date,
-      nextChangeDate: nextChange,
-      priceHistory: history,
-      chartDays: state.chartDays,
-      isLoading: false,
-    ));
+      if (!isClosed) {
+        emit(FuelDetailState(
+          fuelType: ft,
+          currentPrice: current?.roundedPrice,
+          predictedPrice: predicted?.roundedPrice,
+          trend: trend,
+          lastChangeDate: current?.date,
+          nextChangeDate: nextChange,
+          priceHistory: history,
+          chartDays: state.chartDays,
+          isLoading: false,
+        ));
+      }
+    } catch (_) {
+      if (!isClosed) {
+        emit(FuelDetailState(fuelType: state.fuelType, isLoading: false));
+      }
+    }
   }
 
   Future<void> setChartPeriod(int days) async {
-    final history = await priceRepo.getPriceHistory(state.fuelType, days: days);
-    emit(FuelDetailState(
-      fuelType: state.fuelType,
-      currentPrice: state.currentPrice,
-      predictedPrice: state.predictedPrice,
-      trend: state.trend,
-      lastChangeDate: state.lastChangeDate,
-      nextChangeDate: state.nextChangeDate,
-      priceHistory: history,
-      chartDays: days,
-      isLoading: false,
-    ));
+    try {
+      final history = await priceRepo.getPriceHistory(state.fuelType, days: days);
+      if (!isClosed) {
+        emit(FuelDetailState(
+          fuelType: state.fuelType,
+          currentPrice: state.currentPrice,
+          predictedPrice: state.predictedPrice,
+          trend: state.trend,
+          lastChangeDate: state.lastChangeDate,
+          nextChangeDate: state.nextChangeDate,
+          priceHistory: history,
+          chartDays: days,
+          isLoading: false,
+        ));
+      }
+    } catch (_) {
+      // Keep current state on error
+    }
   }
 }

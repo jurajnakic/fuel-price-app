@@ -52,7 +52,9 @@ class _FuelDetailPagerState extends State<FuelDetailPager> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_fuels.length, (i) {
-                return Container(
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
                   width: i == _currentIndex ? 24 : 8,
                   height: 8,
                   margin: const EdgeInsets.symmetric(horizontal: 3),

@@ -113,38 +113,44 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
   }
 
   Future<void> _initApp() async {
-    await _settingsCubit.load();
+    try {
+      await _settingsCubit.load();
 
-    // Check for existing data
-    final prices = await _priceRepo.getOilPrices('BZ=F', days: 30);
-    if (prices.isNotEmpty) {
-      _syncCubit.setHasData(true);
-      await _recalculatePredictions();
-      await _fuelListCubit.load();
-    } else {
-      // First launch — try sync, if fails seed demo data for testing
-      await _fuelListCubit.load();
-      await _syncCubit.sync();
-
-      // If sync failed (no data), seed demo data so app is usable
-      final afterSync = await _priceRepo.getOilPrices('BZ=F', days: 30);
-      if (afterSync.isEmpty) {
-        await _seedDemoData();
+      // Check for existing data
+      final prices = await _priceRepo.getOilPrices('BZ=F', days: 30);
+      if (prices.isNotEmpty) {
         _syncCubit.setHasData(true);
         await _recalculatePredictions();
         await _fuelListCubit.load();
-      }
-    }
+      } else {
+        // First launch — try sync, if fails seed demo data for testing
+        await _fuelListCubit.load();
+        await _syncCubit.sync();
 
-    // Sync remote config
-    final newParams = await _configRepo.syncConfig();
-    if (newParams != null) {
-      _activeParams = newParams;
+        // If sync failed (no data), seed demo data so app is usable
+        final afterSync = await _priceRepo.getOilPrices('BZ=F', days: 30);
+        if (afterSync.isEmpty) {
+          await _seedDemoData();
+          _syncCubit.setHasData(true);
+          await _recalculatePredictions();
+          await _fuelListCubit.load();
+        }
+      }
+
+      // Sync remote config
+      final newParams = await _configRepo.syncConfig();
+      if (newParams != null) {
+        _activeParams = newParams;
+      }
+    } catch (_) {
+      // Ensure app is usable even if init partially fails
+      await _fuelListCubit.load();
     }
   }
 
   Future<void> _handleSyncResult(dynamic result) async {
-    final syncResult = result as SyncResult;
+    if (result is! SyncResult) return;
+    final syncResult = result;
 
     // Save oil prices
     if (syncResult.oilPrices != null && syncResult.oilPrices!.isNotEmpty) {

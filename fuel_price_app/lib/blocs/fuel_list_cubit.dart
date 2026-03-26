@@ -45,30 +45,37 @@ class FuelListCubit extends Cubit<FuelListState> {
   }) : super(const FuelListState());
 
   Future<void> load() async {
-    final order = await settingsRepo.getFuelOrder();
-    final visibility = await settingsRepo.getFuelVisibility();
+    try {
+      final order = await settingsRepo.getFuelOrder();
+      final visibility = await settingsRepo.getFuelVisibility();
 
-    final items = <FuelListItem>[];
-    for (final name in order) {
-      if (visibility[name] != true) continue;
+      final items = <FuelListItem>[];
+      for (final name in order) {
+        if (visibility[name] != true) continue;
 
-      final fuelType = FuelType.values.firstWhere((f) => f.name == name);
-      final current = await priceRepo.getLatestPrice(fuelType, prediction: false);
-      final predicted = await priceRepo.getLatestPrice(fuelType, prediction: true);
+        final fuelType = FuelType.values.firstWhere(
+          (f) => f.name == name,
+          orElse: () => FuelType.es95,
+        );
+        final current = await priceRepo.getLatestPrice(fuelType, prediction: false);
+        final predicted = await priceRepo.getLatestPrice(fuelType, prediction: true);
 
-      final trend = predicted != null
-          ? trendIndicator(predicted.price, current?.price)
-          : null;
+        final trend = predicted != null
+            ? trendIndicator(predicted.price, current?.price)
+            : null;
 
-      items.add(FuelListItem(
-        fuelType: fuelType,
-        currentPrice: current?.roundedPrice,
-        predictedPrice: predicted?.roundedPrice,
-        trend: trend,
-      ));
+        items.add(FuelListItem(
+          fuelType: fuelType,
+          currentPrice: current?.roundedPrice,
+          predictedPrice: predicted?.roundedPrice,
+          trend: trend,
+        ));
+      }
+
+      if (!isClosed) emit(FuelListState(fuels: items, isLoading: false));
+    } catch (_) {
+      if (!isClosed) emit(const FuelListState(isLoading: false));
     }
-
-    emit(FuelListState(fuels: items, isLoading: false));
   }
 
   Future<void> reorder(int oldIndex, int newIndex) async {
@@ -78,6 +85,11 @@ class FuelListCubit extends Cubit<FuelListState> {
     fuels.insert(newIndex, item);
     emit(FuelListState(fuels: fuels, isLoading: false));
 
-    await settingsRepo.saveFuelOrder(fuels.map((f) => f.fuelType.name).toList());
+    // Persist asynchronously — don't block the UI
+    try {
+      await settingsRepo.saveFuelOrder(fuels.map((f) => f.fuelType.name).toList());
+    } catch (_) {
+      // Order already updated in UI, DB save failure is non-critical
+    }
   }
 }

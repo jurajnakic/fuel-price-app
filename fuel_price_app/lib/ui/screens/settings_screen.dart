@@ -187,7 +187,11 @@ class SettingsScreen extends StatelessWidget {
       onTap: () async {
         final url = params.priceRegulation.nnUrl;
         if (url != null) {
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          try {
+            await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+          } catch (_) {
+            // Ignore launch failures
+          }
         }
       },
     );

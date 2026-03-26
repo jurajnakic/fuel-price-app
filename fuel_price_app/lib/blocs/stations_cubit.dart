@@ -69,11 +69,17 @@ class StationsCubit extends Cubit<StationsState> {
 
   Future<void> reorder(int oldIndex, int newIndex) async {
     if (oldIndex < newIndex) newIndex--;
+    if (oldIndex < 0 || oldIndex >= state.stations.length) return;
+    if (newIndex < 0 || newIndex >= state.stations.length) return;
     final stations = List<Station>.from(state.stations);
     final item = stations.removeAt(oldIndex);
     stations.insert(newIndex, item);
     _safeEmit(state.copyWith(stations: stations));
-    await repository.saveStationOrder(stations.map((s) => s.id).toList());
+    try {
+      await repository.saveStationOrder(stations.map((s) => s.id).toList());
+    } catch (_) {
+      // Order already updated in UI
+    }
   }
 
   Future<void> refresh() async {

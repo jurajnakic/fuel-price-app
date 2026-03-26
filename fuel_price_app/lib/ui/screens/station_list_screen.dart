@@ -52,7 +52,7 @@ class _StationListScreenState extends State<StationListScreen> {
           return CustomScrollView(
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                 sliver: SliverReorderableList(
                   itemCount: state.stations.length,
                   itemBuilder: (context, index) {
