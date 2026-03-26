@@ -1,3 +1,15 @@
+/// Fuel category for grouping station fuels by type.
+enum FuelCategory {
+  eurosuper('Eurosuper', 0),
+  eurodizel('Eurodizel', 1),
+  lpg('LPG / UNP', 2),
+  ostalo('Ostalo', 3);
+
+  const FuelCategory(this.label, this.sortOrder);
+  final String label;
+  final int sortOrder;
+}
+
 class StationFuel {
   final String name;
   final String type;
@@ -20,6 +32,27 @@ class StationFuel {
   int get sortIndex {
     final idx = _sortOrder.indexOf(type);
     return idx >= 0 ? idx : 999;
+  }
+
+  /// Returns the fuel category for grouping purposes.
+  FuelCategory get category {
+    if (type.startsWith('es')) return FuelCategory.eurosuper;
+    if (type.startsWith('eurodizel')) return FuelCategory.eurodizel;
+    if (type == 'lpg' || type == 'unp10kg') return FuelCategory.lpg;
+    // Heuristic: check name for common patterns
+    final nameLower = name.toLowerCase();
+    if (nameLower.contains('eurosuper') || nameLower.contains('es ') ||
+        nameLower.contains('super') || nameLower.contains('benzin')) {
+      return FuelCategory.eurosuper;
+    }
+    if (nameLower.contains('dizel') || nameLower.contains('diesel')) {
+      return FuelCategory.eurodizel;
+    }
+    if (nameLower.contains('lpg') || nameLower.contains('unp') ||
+        nameLower.contains('autoplin')) {
+      return FuelCategory.lpg;
+    }
+    return FuelCategory.ostalo;
   }
 }
 
@@ -56,6 +89,32 @@ class Station {
       return a.name.compareTo(b.name);
     });
     return sorted;
+  }
+
+  /// Returns fuels grouped by category, sorted by price within each group.
+  /// [ascending] controls price sort direction within each category.
+  List<({FuelCategory category, List<StationFuel> fuels})> groupedFuels({
+    bool ascending = true,
+  }) {
+    final groups = <FuelCategory, List<StationFuel>>{};
+    for (final fuel in fuels) {
+      (groups[fuel.category] ??= []).add(fuel);
+    }
+
+    // Sort fuels within each group by price
+    for (final list in groups.values) {
+      list.sort((a, b) => ascending
+          ? a.price.compareTo(b.price)
+          : b.price.compareTo(a.price));
+    }
+
+    // Sort groups by category order
+    final entries = groups.entries.toList()
+      ..sort((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder));
+
+    return entries
+        .map((e) => (category: e.key, fuels: e.value))
+        .toList();
   }
 }
 

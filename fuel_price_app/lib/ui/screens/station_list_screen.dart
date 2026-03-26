@@ -15,7 +15,7 @@ class _StationListScreenState extends State<StationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Postaje')),
+      appBar: AppBar(title: const Text('Cijene na postajama')),
       body: BlocBuilder<StationsCubit, StationsState>(
         builder: (context, state) {
           if (state.isLoading && state.stations.isEmpty) {

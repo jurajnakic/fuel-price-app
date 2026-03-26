@@ -339,7 +339,7 @@ class _AppHomeState extends State<_AppHome> {
 
   void _onPageChanged(int index) {
     setState(() => _currentIndex = index);
-    // Lazy load station data only when Postaje tab is first visited
+    // Lazy load station data only when Cijene tab is first visited
     if (index == 1 && !_stationsTabVisited) {
       _stationsTabVisited = true;
       context.read<StationsCubit>().load();
@@ -370,7 +370,7 @@ class _AppHomeState extends State<_AppHome> {
           NavigationDestination(
             icon: Icon(Icons.local_gas_station_outlined),
             selectedIcon: Icon(Icons.local_gas_station),
-            label: 'Postaje',
+            label: 'Cijene',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
