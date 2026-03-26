@@ -40,7 +40,12 @@ class FuelListScreen extends StatelessWidget {
               }
 
               return RefreshIndicator(
-                onRefresh: () => syncCubit.sync(),
+                onRefresh: () async {
+                  await syncCubit.sync();
+                  if (context.mounted) {
+                    await context.read<FuelListCubit>().load();
+                  }
+                },
                 child: _FuelListBody(
                   fuels: state.fuels,
                   lastSyncTime: syncCubit.lastSyncTime,
@@ -112,7 +117,7 @@ class _FuelListBody extends StatelessWidget {
             itemCount: fuels.length,
             itemBuilder: (context, index) {
               final item = fuels[index];
-              return ReorderableDragStartListener(
+              return ReorderableDelayedDragStartListener(
                 key: ValueKey(item.fuelType),
                 index: index,
                 child: _FuelCard(

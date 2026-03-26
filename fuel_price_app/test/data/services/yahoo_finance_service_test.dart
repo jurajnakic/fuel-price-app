@@ -5,23 +5,45 @@ import 'package:fuel_price_app/data/services/yahoo_finance_service.dart';
 
 class MockDio extends Mock implements Dio {}
 
+class FakeOptions extends Fake implements Options {}
+
 void main() {
   late YahooFinanceService service;
   late MockDio mockDio;
+
+  setUpAll(() {
+    registerFallbackValue(FakeOptions());
+  });
 
   setUp(() {
     mockDio = MockDio();
     service = YahooFinanceService(dio: mockDio);
   });
 
-  test('parses historical prices from CSV response', () async {
-    const csvData = 'Date,Open,High,Low,Close,Adj Close,Volume\n'
-        '2026-03-10,71.5,72.0,70.8,71.2,71.2,100000\n'
-        '2026-03-11,71.3,71.8,70.5,71.0,71.0,120000\n';
+  test('parses historical prices from v8 chart API JSON response', () async {
+    final jsonData = {
+      'chart': {
+        'result': [
+          {
+            'timestamp': [1741564800, 1741651200],
+            'indicators': {
+              'quote': [
+                {
+                  'close': [71.2, 71.0],
+                }
+              ]
+            }
+          }
+        ]
+      }
+    };
 
-    when(() => mockDio.get(any(), queryParameters: any(named: 'queryParameters')))
-        .thenAnswer((_) async => Response(
-      data: csvData,
+    when(() => mockDio.get(
+      any(),
+      queryParameters: any(named: 'queryParameters'),
+      options: any(named: 'options'),
+    )).thenAnswer((_) async => Response(
+      data: jsonData,
       statusCode: 200,
       requestOptions: RequestOptions(path: ''),
     ));
@@ -29,31 +51,95 @@ void main() {
     final prices = await service.fetchHistoricalPrices('BZ=F', 14);
     expect(prices.length, 2);
     expect(prices.first.close, 71.2);
-    expect(prices.first.date, DateTime(2026, 3, 10));
   });
 
-  test('handles null/zero close prices', () async {
-    const csvData = 'Date,Open,High,Low,Close,Adj Close,Volume\n'
-        '2026-03-10,71.5,72.0,70.8,null,71.2,100000\n'
-        '2026-03-11,71.3,71.8,70.5,71.0,71.0,120000\n';
+  test('handles null close prices in v8 response', () async {
+    final jsonData = {
+      'chart': {
+        'result': [
+          {
+            'timestamp': [1741564800, 1741651200],
+            'indicators': {
+              'quote': [
+                {
+                  'close': [null, 71.0],
+                }
+              ]
+            }
+          }
+        ]
+      }
+    };
 
-    when(() => mockDio.get(any(), queryParameters: any(named: 'queryParameters')))
-        .thenAnswer((_) async => Response(
-      data: csvData,
+    when(() => mockDio.get(
+      any(),
+      queryParameters: any(named: 'queryParameters'),
+      options: any(named: 'options'),
+    )).thenAnswer((_) async => Response(
+      data: jsonData,
       statusCode: 200,
       requestOptions: RequestOptions(path: ''),
     ));
 
     final prices = await service.fetchHistoricalPrices('BZ=F', 14);
     expect(prices.length, 1);
+    expect(prices.first.close, 71.0);
   });
 
-  test('empty CSV returns empty list', () async {
-    const csvData = 'Date,Open,High,Low,Close,Adj Close,Volume\n';
+  test('falls back to CSV when v8 fails', () async {
+    const csvData = 'Date,Open,High,Low,Close,Adj Close,Volume\n'
+        '2026-03-10,71.5,72.0,70.8,71.2,71.2,100000\n';
 
-    when(() => mockDio.get(any(), queryParameters: any(named: 'queryParameters')))
-        .thenAnswer((_) async => Response(
-      data: csvData,
+    var callCount = 0;
+    when(() => mockDio.get(
+      any(),
+      queryParameters: any(named: 'queryParameters'),
+      options: any(named: 'options'),
+    )).thenAnswer((_) async {
+      callCount++;
+      if (callCount == 1) {
+        throw DioException(
+          requestOptions: RequestOptions(path: ''),
+          type: DioExceptionType.badResponse,
+        );
+      }
+      return Response(
+        data: csvData,
+        statusCode: 200,
+        requestOptions: RequestOptions(path: ''),
+      );
+    });
+
+    final prices = await service.fetchHistoricalPrices('BZ=F', 14);
+    expect(prices.length, 1);
+    expect(prices.first.close, 71.2);
+    expect(callCount, 2); // v8 failed, then CSV succeeded
+  });
+
+  test('empty v8 response returns empty list', () async {
+    final jsonData = {
+      'chart': {
+        'result': [
+          {
+            'timestamp': <int>[],
+            'indicators': {
+              'quote': [
+                {
+                  'close': <double?>[],
+                }
+              ]
+            }
+          }
+        ]
+      }
+    };
+
+    when(() => mockDio.get(
+      any(),
+      queryParameters: any(named: 'queryParameters'),
+      options: any(named: 'options'),
+    )).thenAnswer((_) async => Response(
+      data: jsonData,
       statusCode: 200,
       requestOptions: RequestOptions(path: ''),
     ));

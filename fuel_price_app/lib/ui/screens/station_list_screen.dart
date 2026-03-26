@@ -17,13 +17,6 @@ class _StationListScreenState extends State<StationListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cijene na postajama'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Osvježi',
-            onPressed: () => context.read<StationsCubit>().refresh(),
-          ),
-        ],
       ),
       body: BlocBuilder<StationsCubit, StationsState>(
         builder: (context, state) {
@@ -49,34 +42,37 @@ class _StationListScreenState extends State<StationListScreen> {
             );
           }
 
-          return CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                sliver: SliverReorderableList(
-                  itemCount: state.stations.length,
-                  itemBuilder: (context, index) {
-                    final station = state.stations[index];
-                    return ReorderableDragStartListener(
-                      key: ValueKey(station.id),
-                      index: index,
-                      child: _StationTile(
-                        station: station,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => StationDetailPager(initialStation: station),
+          return RefreshIndicator(
+            onRefresh: () => context.read<StationsCubit>().refresh(),
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                  sliver: SliverReorderableList(
+                    itemCount: state.stations.length,
+                    itemBuilder: (context, index) {
+                      final station = state.stations[index];
+                      return ReorderableDelayedDragStartListener(
+                        key: ValueKey(station.id),
+                        index: index,
+                        child: _StationTile(
+                          station: station,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StationDetailPager(initialStation: station),
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                  onReorder: (oldIndex, newIndex) {
-                    context.read<StationsCubit>().reorder(oldIndex, newIndex);
-                  },
+                      );
+                    },
+                    onReorder: (oldIndex, newIndex) {
+                      context.read<StationsCubit>().reorder(oldIndex, newIndex);
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
