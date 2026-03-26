@@ -73,7 +73,7 @@ class _StationListScreenState extends State<StationListScreen> {
 
 class _StationTile extends StatelessWidget {
   final Station station;
-  const _StationTile({required this.station});
+  const _StationTile({super.key, required this.station});
 
   @override
   Widget build(BuildContext context) {
