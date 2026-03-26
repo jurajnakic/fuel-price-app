@@ -32,7 +32,13 @@ class StationRepository {
   }
 
   Future<List<Station>> getStations() async {
-    final stationRows = await db.query('stations', orderBy: 'name ASC');
+    // Use custom order if available, fall back to name ASC
+    final stationRows = await db.rawQuery('''
+      SELECT s.* FROM stations s
+      LEFT JOIN station_order o ON s.id = o.station_id
+      ORDER BY CASE WHEN o.position IS NOT NULL THEN 0 ELSE 1 END,
+               o.position ASC, s.name ASC
+    ''');
     final stations = <Station>[];
 
     for (final row in stationRows) {
@@ -67,6 +73,19 @@ class StationRepository {
     } catch (_) {
       return true; // corrupted timestamp → force re-fetch
     }
+  }
+
+  Future<void> saveStationOrder(List<String> stationIds) async {
+    final database = await db.database;
+    await database.transaction((txn) async {
+      await txn.delete('station_order');
+      for (var i = 0; i < stationIds.length; i++) {
+        await txn.insert('station_order', {
+          'station_id': stationIds[i],
+          'position': i,
+        });
+      }
+    });
   }
 
   Future<void> recordFetchTime() async {

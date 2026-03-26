@@ -67,6 +67,15 @@ class StationsCubit extends Cubit<StationsState> {
     }
   }
 
+  Future<void> reorder(int oldIndex, int newIndex) async {
+    if (oldIndex < newIndex) newIndex--;
+    final stations = List<Station>.from(state.stations);
+    final item = stations.removeAt(oldIndex);
+    stations.insert(newIndex, item);
+    _safeEmit(state.copyWith(stations: stations));
+    await repository.saveStationOrder(stations.map((s) => s.id).toList());
+  }
+
   Future<void> refresh() async {
     _safeEmit(state.copyWith(isLoading: true, hasError: false));
 

@@ -42,12 +42,26 @@ class _StationListScreenState extends State<StationListScreen> {
 
           return RefreshIndicator(
             onRefresh: () => context.read<StationsCubit>().refresh(),
-            child: ListView.builder(
+            child: ReorderableListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: state.stations.length,
+              onReorder: (oldIndex, newIndex) {
+                context.read<StationsCubit>().reorder(oldIndex, newIndex);
+              },
+              proxyDecorator: (child, index, animation) {
+                return Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.transparent,
+                  child: child,
+                );
+              },
               itemBuilder: (context, index) {
                 final station = state.stations[index];
-                return _StationTile(station: station);
+                return _StationTile(
+                  key: ValueKey(station.id),
+                  station: station,
+                );
               },
             ),
           );
