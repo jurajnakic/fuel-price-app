@@ -261,12 +261,18 @@ def scrape_hak():
 
 # --- Build station_prices.json ---
 
+# Only include these major station chains
+ALLOWED_STATIONS = {'ina', 'petrol', 'shell', 'tifon', 'lukoil'}
+
+
 def build_json(primary, backup=None):
     """Merge primary and backup data into station_prices.json format."""
     # Use primary, fill gaps from backup
     all_companies = set(primary.prices.keys())
     if backup:
         all_companies |= set(backup.prices.keys())
+    # Filter to allowed stations only
+    all_companies = all_companies & ALLOWED_STATIONS
 
     stations = []
     today = date.today().isoformat()
