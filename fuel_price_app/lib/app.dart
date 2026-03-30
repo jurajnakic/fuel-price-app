@@ -133,21 +133,24 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     try {
       await _settingsCubit.load();
 
-      // Check for existing data — need all 3 symbols (BZ=F, RB=F, HO=F)
+      // Check for any existing data (even partial)
       final brentPrices = await _priceRepo.getOilPrices('BZ=F', days: 30);
       final rbobPrices = await _priceRepo.getOilPrices('RB=F', days: 30);
       final hoPrices = await _priceRepo.getOilPrices('HO=F', days: 30);
       _log('existing: BZ=${brentPrices.length} RB=${rbobPrices.length} HO=${hoPrices.length}');
 
-      final hasAllSymbols = brentPrices.isNotEmpty && rbobPrices.isNotEmpty && hoPrices.isNotEmpty;
-      if (hasAllSymbols) {
+      final hasAnyData = brentPrices.isNotEmpty || rbobPrices.isNotEmpty || hoPrices.isNotEmpty;
+
+      if (hasAnyData) {
+        // Show cached data immediately
         _syncCubit.setHasData(true);
         await _recalculatePredictions();
         await _fuelListCubit.load();
+        // Then refresh in background (don't await)
+        _syncCubit.sync();
       } else {
         _log('no existing data — starting sync');
-        // First launch — sync real data from APIs
-        await _fuelListCubit.load();
+        // First launch — auto-sync immediately
         await _syncCubit.sync();
 
         final afterSync = await _priceRepo.getOilPrices('RB=F', days: 30);
@@ -157,13 +160,6 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
           await _recalculatePredictions();
           await _fuelListCubit.load();
         }
-        // NOTE: Uncomment below to seed demo data when APIs are unavailable
-        // if (afterSync.isEmpty) {
-        //   await _seedDemoData();
-        //   _syncCubit.setHasData(true);
-        //   await _recalculatePredictions();
-        //   await _fuelListCubit.load();
-        // }
       }
 
       // Sync remote config

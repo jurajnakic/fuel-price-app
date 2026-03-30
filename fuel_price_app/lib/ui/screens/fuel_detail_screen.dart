@@ -137,11 +137,25 @@ class _PredictionCard extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              Text(
-                'Predviđena cijena',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: cs.onPrimaryContainer,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Predviđena cijena',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  _InfoButton(
+                    tooltip: 'Procjena cijene za sljedeće razdoblje na '
+                        'temelju trenutnih tržišnih cijena sirovina '
+                        'i tečaja EUR/USD.\n\n'
+                        'Prikazana razlika odnosi se na usporedbu s '
+                        'posljednjom utvrđenom cijenom.',
+                    color: cs.onPrimaryContainer,
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Text(
@@ -156,18 +170,45 @@ class _PredictionCard extends StatelessWidget {
               if (diff != null) ...[
                 const SizedBox(height: 8),
                 _DiffChip(diff: diff, trend: state.trend),
-                const SizedBox(height: 4),
-                Text(
-                  'vs trenutna izračunata cijena',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: cs.onPrimaryContainer.withValues(alpha: 0.7),
-                    fontSize: 11,
-                  ),
-                ),
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _InfoButton extends StatelessWidget {
+  final String tooltip;
+  final Color? color;
+
+  const _InfoButton({required this.tooltip, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final iconColor = color ?? cs.onSurfaceVariant;
+
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            content: Text(tooltip),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('U redu'),
+              ),
+            ],
+          ),
+        );
+      },
+      child: Icon(
+        Icons.help_outline,
+        size: 20,
+        color: iconColor.withValues(alpha: 0.6),
       ),
     );
   }
@@ -329,6 +370,7 @@ class _PriceChart extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(4, 16, 16, 8),
         child: LineChart(
+          duration: Duration.zero,
           LineChartData(
             clipData: const FlClipData.all(),
             gridData: FlGridData(

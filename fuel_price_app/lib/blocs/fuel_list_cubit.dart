@@ -4,6 +4,7 @@ import 'package:fuel_price_app/data/repositories/price_repository.dart';
 import 'package:fuel_price_app/data/repositories/settings_repository.dart';
 import 'package:fuel_price_app/domain/formula_engine.dart';
 import 'package:fuel_price_app/domain/price_cycle_service.dart';
+import 'package:fuel_price_app/models/fuel_params.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 
 class FuelListItem extends Equatable {
@@ -25,12 +26,13 @@ class FuelListItem extends Equatable {
 
 class FuelListState extends Equatable {
   final List<FuelListItem> fuels;
+  final DateTime? currentPeriodStart;
   final bool isLoading;
 
-  const FuelListState({this.fuels = const [], this.isLoading = true});
+  const FuelListState({this.fuels = const [], this.currentPeriodStart, this.isLoading = true});
 
   @override
-  List<Object?> get props => [fuels, isLoading];
+  List<Object?> get props => [fuels, currentPeriodStart, isLoading];
 }
 
 class FuelListCubit extends Cubit<FuelListState> {
@@ -72,7 +74,12 @@ class FuelListCubit extends Cubit<FuelListState> {
         ));
       }
 
-      if (!isClosed) emit(FuelListState(fuels: items, isLoading: false));
+      final params = FuelParams.defaultParams;
+      final refDate = DateTime.parse(params.referenceDate);
+      final nextChange = nextPriceChangeDate(DateTime.now(), refDate, params.cycleDays);
+      final periodStart = nextChange.subtract(Duration(days: params.cycleDays));
+
+      if (!isClosed) emit(FuelListState(fuels: items, currentPeriodStart: periodStart, isLoading: false));
     } catch (_) {
       if (!isClosed) emit(const FuelListState(isLoading: false));
     }
@@ -83,7 +90,7 @@ class FuelListCubit extends Cubit<FuelListState> {
     if (newIndex > oldIndex) newIndex--;
     final item = fuels.removeAt(oldIndex);
     fuels.insert(newIndex, item);
-    emit(FuelListState(fuels: fuels, isLoading: false));
+    emit(FuelListState(fuels: fuels, currentPeriodStart: state.currentPeriodStart, isLoading: false));
 
     // Persist asynchronously — don't block the UI
     try {

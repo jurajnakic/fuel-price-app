@@ -50,12 +50,10 @@ class PriceRepository {
   }
 
   Future<void> saveFuelPrice(FuelPrice price) async {
-    if (price.isPrediction) {
-      // Delete old predictions for this fuel type before saving new one
-      await db.delete('fuel_prices',
-          where: 'fuel_type = ? AND is_prediction = 1',
-          whereArgs: [price.fuelType.name]);
-    }
+    // Upsert: delete existing for same fuel type + prediction type, then insert fresh
+    await db.delete('fuel_prices',
+        where: 'fuel_type = ? AND is_prediction = ?',
+        whereArgs: [price.fuelType.name, price.isPrediction ? 1 : 0]);
     await db.insert('fuel_prices', price.toMap());
   }
 
@@ -100,8 +98,8 @@ class PriceRepository {
     final lastRate = rates.last.usdEur;
     final result = <FuelPrice>[];
 
-    // Calculate a price for every 7th data point
-    for (var i = windowSize; i <= oilPrices.length; i += 7) {
+    // Calculate a price for every data point (sliding window)
+    for (var i = windowSize; i <= oilPrices.length; i++) {
       final window = oilPrices.sublist(i - windowSize, i);
       // Convert raw Yahoo price → CIF Med USD/tonne
       final cifValues = window.map((p) => p.cifMed * factor).toList();

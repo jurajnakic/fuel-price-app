@@ -40,7 +40,7 @@ class FuelParams {
   /// Conversion factors: raw Yahoo price → CIF Med USD/tonne.
   /// RB=F (USD/gal): ×349.9 (gal→tonne) × ~1.15 (CIF Med premium) ≈ 402
   /// HO=F (USD/gal): ×312.6 (gal→tonne) × ~1.20 (CIF Med premium) ≈ 375
-  /// BZ=F (USD/bbl): ×7.53 (bbl→tonne) × ~2.24 (LPG product factor) ≈ 16.86
+  /// BZ=F (USD/bbl): ×7.33 (bbl→tonne) × ~2.18 (LPG product/CIF Med factor) ≈ 16.0
   final Map<String, double> cifMedFactors;
 
   const FuelParams({
@@ -63,7 +63,7 @@ class FuelParams {
       'es95': 402.4,
       'es100': 402.4,
       'eurodizel': 327.0,
-      'unp_10kg': 14.12,
+      'unp_10kg': 16.0,
     },
   });
 
@@ -114,7 +114,7 @@ class FuelParams {
               'es95': 402.4,
               'es100': 402.4,
               'eurodizel': 327.0,
-              'unp_10kg': 14.12,
+              'unp_10kg': 16.0,
             },
     );
   }

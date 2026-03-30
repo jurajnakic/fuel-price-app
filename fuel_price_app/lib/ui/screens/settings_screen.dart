@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fuel_price_app/blocs/settings_cubit.dart';
 import 'package:fuel_price_app/blocs/fuel_list_cubit.dart';
@@ -27,12 +29,7 @@ class SettingsScreen extends StatelessWidget {
 
               // --- Notifications ---
               _SectionHeader(title: 'Obavijesti'),
-              SwitchListTile(
-                secondary: const Icon(Icons.notifications_outlined),
-                title: const Text('Obavijesti o promjeni cijena'),
-                value: state.notificationsEnabled,
-                onChanged: (_) => context.read<SettingsCubit>().toggleNotifications(),
-              ),
+              _NotificationToggle(state: state),
               if (state.notificationsEnabled) ...[
                 _buildDayTile(context, state),
                 _buildHourTile(context, state),
@@ -242,6 +239,98 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _NotificationToggle extends StatefulWidget {
+  final SettingsState state;
+  const _NotificationToggle({required this.state});
+
+  @override
+  State<_NotificationToggle> createState() => _NotificationToggleState();
+}
+
+class _NotificationToggleState extends State<_NotificationToggle> {
+  @override
+  void initState() {
+    super.initState();
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    if (!widget.state.notificationsEnabled) return;
+
+    final plugin = FlutterLocalNotificationsPlugin();
+    final android = plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      final granted = await android.areNotificationsEnabled();
+      if (granted != true && mounted) {
+        // Permission revoked at OS level — turn off our toggle
+        context.read<SettingsCubit>().toggleNotifications();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      secondary: const Icon(Icons.notifications_outlined),
+      title: const Text('Obavijesti o promjeni cijena'),
+      value: widget.state.notificationsEnabled,
+      onChanged: (_) => _toggle(),
+    );
+  }
+
+  Future<void> _toggle() async {
+    if (!widget.state.notificationsEnabled) {
+      // Turning ON — request permission
+      final plugin = FlutterLocalNotificationsPlugin();
+      final android = plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        // First try the system dialog
+        final granted = await android.requestNotificationsPermission();
+        if (granted != true) {
+          // System dialog was suppressed (user denied before or revoked in settings)
+          // Offer to open app notification settings directly
+          if (!mounted) return;
+          final openSettings = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Obavijesti su isključene'),
+              content: const Text(
+                'Obavijesti za ovu aplikaciju su isključene na razini uređaja. '
+                'Želite li otvoriti postavke za uključivanje?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Ne'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Otvori postavke'),
+                ),
+              ],
+            ),
+          );
+          if (openSettings == true) {
+            // Open app notification settings via Android intent
+            const channel = MethodChannel('app.settings');
+            try {
+              await channel.invokeMethod('openNotificationSettings');
+            } catch (_) {
+              // Fallback: ignored if channel not set up
+            }
+          }
+          return;
+        }
+      }
+    }
+    if (mounted) {
+      context.read<SettingsCubit>().toggleNotifications();
+    }
   }
 }
 

@@ -10,6 +10,7 @@ class FuelDetailState extends Equatable {
   final FuelType fuelType;
   final double? predictedPrice;
   final double? previousPrice;
+  final DateTime? currentPeriodStart;
   final DateTime? nextChangeDate;
   final List<FuelPrice> priceHistory;
   final int chartDays;
@@ -19,6 +20,7 @@ class FuelDetailState extends Equatable {
     required this.fuelType,
     this.predictedPrice,
     this.previousPrice,
+    this.currentPeriodStart,
     this.nextChangeDate,
     this.priceHistory = const [],
     this.chartDays = 30,
@@ -40,8 +42,8 @@ class FuelDetailState extends Equatable {
 
   @override
   List<Object?> get props => [
-    fuelType, predictedPrice, previousPrice, nextChangeDate,
-    priceHistory, chartDays, isLoading,
+    fuelType, predictedPrice, previousPrice, currentPeriodStart,
+    nextChangeDate, priceHistory, chartDays, isLoading,
   ];
 }
 
@@ -72,12 +74,14 @@ class FuelDetailCubit extends Cubit<FuelDetailState> {
       );
 
       final nextChange = nextPriceChangeDate(DateTime.now(), referenceDate, cycleDays);
+      final periodStart = nextChange.subtract(Duration(days: cycleDays));
 
       if (!isClosed) {
         emit(FuelDetailState(
           fuelType: ft,
           predictedPrice: predicted?.roundedPrice,
           previousPrice: current?.roundedPrice,
+          currentPeriodStart: periodStart,
           nextChangeDate: nextChange,
           priceHistory: history,
           chartDays: state.chartDays,
@@ -103,6 +107,7 @@ class FuelDetailCubit extends Cubit<FuelDetailState> {
           fuelType: state.fuelType,
           predictedPrice: state.predictedPrice,
           previousPrice: state.previousPrice,
+          currentPeriodStart: state.currentPeriodStart,
           nextChangeDate: state.nextChangeDate,
           priceHistory: history,
           chartDays: days,

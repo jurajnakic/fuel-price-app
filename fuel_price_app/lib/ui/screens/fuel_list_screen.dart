@@ -48,6 +48,7 @@ class FuelListScreen extends StatelessWidget {
                 },
                 child: _FuelListBody(
                   fuels: state.fuels,
+                  currentPeriodStart: state.currentPeriodStart,
                   lastSyncTime: syncCubit.lastSyncTime,
                   onReorder: (oldIndex, newIndex) {
                     context.read<FuelListCubit>().reorder(oldIndex, newIndex);
@@ -81,11 +82,13 @@ class FuelListScreen extends StatelessWidget {
 
 class _FuelListBody extends StatelessWidget {
   final List<FuelListItem> fuels;
+  final DateTime? currentPeriodStart;
   final DateTime? lastSyncTime;
   final void Function(int, int) onReorder;
 
   const _FuelListBody({
     required this.fuels,
+    this.currentPeriodStart,
     required this.lastSyncTime,
     required this.onReorder,
   });
@@ -96,19 +99,56 @@ class _FuelListBody extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        // Last sync timestamp
-        if (lastSyncTime != null)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-              child: Text(
-                'Zadnje ažuriranje: ${DateFormat('dd.MM.yyyy. HH:mm').format(lastSyncTime!)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
+        // Header with sync time and info button
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    lastSyncTime != null
+                        ? 'Zadnje ažuriranje: ${DateFormat('dd.MM.yyyy. HH:mm').format(lastSyncTime!)}'
+                        : '',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-              ),
+                GestureDetector(
+                  onTap: () => showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('O cijenama'),
+                      content: const Text(
+                        'Prikazane cijene izračunate su prema formuli iz Uredbe '
+                        'o utvrđivanju marži za naftne derivate (NN 31/2025), '
+                        'na temelju prosječnih tržišnih cijena sirovina i tečaja '
+                        'EUR/USD u prethodnom 14-dnevnom razdoblju.\n\n'
+                        'Predviđene cijene procjenjuju cijenu za sljedeće '
+                        'razdoblje na temelju trenutnih tržišnih podataka.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('U redu'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(
+                      Icons.help_outline,
+                      size: 20,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
 
         // Fuel list
         SliverPadding(
@@ -122,6 +162,7 @@ class _FuelListBody extends StatelessWidget {
                 index: index,
                 child: _FuelCard(
                   item: item,
+                  currentPeriodStart: currentPeriodStart,
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -144,8 +185,9 @@ class _FuelListBody extends StatelessWidget {
 class _FuelCard extends StatelessWidget {
   final FuelListItem item;
   final VoidCallback onTap;
+  final DateTime? currentPeriodStart;
 
-  const _FuelCard({required this.item, required this.onTap});
+  const _FuelCard({required this.item, required this.onTap, this.currentPeriodStart});
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +234,11 @@ class _FuelCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     Text(
-                      displayPrice != null ? 'Izračunata cijena' : 'Nema podataka',
+                      displayPrice != null
+                          ? (currentPeriodStart != null
+                              ? 'Cijena na ${DateFormat('d.M.yyyy.').format(currentPeriodStart!)}'
+                              : 'Cijena')
+                          : 'Nema podataka',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
