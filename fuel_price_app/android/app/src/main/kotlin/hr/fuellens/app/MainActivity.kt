@@ -1,4 +1,4 @@
-package hr.lakaindustrija.fuel_price_app
+package hr.fuellens.app
 
 import android.content.Intent
 import android.os.Build
