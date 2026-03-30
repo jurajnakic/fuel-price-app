@@ -93,6 +93,11 @@ void callbackDispatcher() {
       final nextChange = nextPriceChangeDate(today, refDate, cycle);
       final currentPeriodStart = nextChange.subtract(Duration(days: cycle));
 
+      // Find exchange rate from before current period for "current" price
+      final allRates = await priceRepo.getExchangeRates(days: 60);
+      final ratesBeforePeriod = allRates.where((r) => r.date.isBefore(currentPeriodStart)).toList();
+      final currentRate = ratesBeforePeriod.isNotEmpty ? ratesBeforePeriod.last.usdEur : usdEurRate;
+
       for (final fuelType in FuelType.values) {
         final symbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
         final factor = params.cifMedFactors[fuelType.paramKey] ?? 402.4;
@@ -100,7 +105,7 @@ void callbackDispatcher() {
         final symbolPrices = await priceRepo.getOilPrices(symbol, days: 60);
         if (symbolPrices.isEmpty) continue;
 
-        // Current period price (using prices before currentPeriodStart)
+        // Current period price (using prices and rate from BEFORE currentPeriodStart)
         final currentWindow = symbolPrices
             .where((p) => p.date.isBefore(currentPeriodStart))
             .toList();
@@ -108,14 +113,14 @@ void callbackDispatcher() {
           final count = currentWindow.length < 14 ? currentWindow.length : 14;
           final window = currentWindow.reversed.take(count).toList().reversed.toList();
           final cifCurrent = window.map((p) => p.cifMed * factor).toList();
-          final ratesCurrent = List.filled(cifCurrent.length, usdEurRate);
+          final ratesCurrent = List.filled(cifCurrent.length, currentRate);
           final currentPrice = engine.predictPrice(fuelType, cifCurrent, ratesCurrent);
           await priceRepo.saveFuelPrice(FuelPrice(
             fuelType: fuelType, date: currentPeriodStart, price: currentPrice, isPrediction: false,
           ));
         }
 
-        // Next period prediction (using most recent prices)
+        // Next period prediction (using most recent prices and latest rate)
         final nextCount = symbolPrices.length < 14 ? symbolPrices.length : 14;
         final nextWindow = symbolPrices.reversed.take(nextCount).toList().reversed.toList();
         final cifNext = nextWindow.map((p) => p.cifMed * factor).toList();

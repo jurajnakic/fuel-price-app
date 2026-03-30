@@ -107,8 +107,8 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         },
         fetchConfig: () async {
           final params = await _remoteConfigService.fetchParams();
-          if (params == null) throw Exception('Config fetch failed');
-          return <String, dynamic>{'version': params.version};
+          // Return current version even if fetch fails (config is optional)
+          return <String, dynamic>{'version': params?.version ?? _activeParams.version};
         },
       ),
       onSyncResult: _handleSyncResult,
@@ -256,13 +256,18 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
       return;
     }
 
-    final lastRate = rates.last.usdEur;
     final refDate = DateTime.parse(_activeParams.referenceDate);
     final cycle = _activeParams.cycleDays;
     final now = DateTime.now();
     final nextChange = nextPriceChangeDate(now, refDate, cycle);
     // Current period started one cycle before the next change
     final currentPeriodStart = nextChange.subtract(Duration(days: cycle));
+
+    // Find exchange rate closest to currentPeriodStart for the "current" price
+    final ratesBeforePeriod = rates.where((r) => r.date.isBefore(currentPeriodStart)).toList();
+    final currentRate = ratesBeforePeriod.isNotEmpty ? ratesBeforePeriod.last.usdEur : rates.last.usdEur;
+    final latestRate = rates.last.usdEur;
+    _log('rates: current=$currentRate (before $currentPeriodStart), latest=$latestRate');
 
     for (final ft in FuelType.values) {
       try {
@@ -284,13 +289,14 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         final nextWindowPrices = oilPrices;
 
         // --- Current period price (isPrediction=false) ---
+        // Uses exchange rate from that period, NOT today's rate
         if (currentWindowPrices.length >= 10) {
           final count = currentWindowPrices.length < 14 ? currentWindowPrices.length : 14;
           final window = currentWindowPrices.reversed.take(count).toList().reversed.toList();
           final cifCurrent = window.map((p) => p.cifMed * factor).toList();
-          final ratesCurrent = List.generate(cifCurrent.length, (_) => lastRate);
+          final ratesCurrent = List.generate(cifCurrent.length, (_) => currentRate);
           final currentPrice = engine.predictPrice(ft, cifCurrent, ratesCurrent);
-          _log('${ft.name}: current=${currentPrice.toStringAsFixed(4)} (window before $currentPeriodStart)');
+          _log('${ft.name}: current=${currentPrice.toStringAsFixed(4)} (rate=$currentRate, window before $currentPeriodStart)');
 
           await _priceRepo.saveFuelPrice(
             FuelPrice(fuelType: ft, date: currentPeriodStart, price: currentPrice, isPrediction: false),
@@ -298,10 +304,11 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         }
 
         // --- Next period price (isPrediction=true) ---
+        // Uses latest exchange rate
         final nextCount = nextWindowPrices.length < 14 ? nextWindowPrices.length : 14;
         final nextWindow = nextWindowPrices.reversed.take(nextCount).toList().reversed.toList();
         final cifNext = nextWindow.map((p) => p.cifMed * factor).toList();
-        final ratesNext = List.generate(cifNext.length, (_) => lastRate);
+        final ratesNext = List.generate(cifNext.length, (_) => latestRate);
         final predictedPrice = engine.predictPrice(ft, cifNext, ratesNext);
         _log('${ft.name}: predicted=${predictedPrice.toStringAsFixed(4)} (next=$nextChange)');
 

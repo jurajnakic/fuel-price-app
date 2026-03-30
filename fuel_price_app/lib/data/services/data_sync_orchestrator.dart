@@ -37,7 +37,7 @@ class DataSyncOrchestrator {
     required this.fetchOilPrices,
     required this.fetchExchangeRates,
     required this.fetchConfig,
-    this.timeout = const Duration(seconds: 10),
+    this.timeout = const Duration(seconds: 30),
   });
 
   Future<SyncResult> sync() async {
