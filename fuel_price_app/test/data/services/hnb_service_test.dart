@@ -37,16 +37,10 @@ void main() {
     expect(() => service.fetchUsdEurRate(), throwsException);
   });
 
-  test('fetches rate for specific date', () async {
-    when(() => mockDio.get(any())).thenAnswer((_) async => Response(
-      data: [
-        {'srednji_tecaj': '0,930000', 'valuta': 'USD'}
-      ],
-      statusCode: 200,
-      requestOptions: RequestOptions(path: ''),
-    ));
+  test('fetchHistoricalRates returns empty on error', () async {
+    when(() => mockDio.get(any())).thenThrow(Exception('network error'));
 
-    final rate = await service.fetchUsdEurRateForDate(DateTime(2026, 3, 20));
-    expect(rate, closeTo(0.93, 0.001));
+    final rates = await service.fetchHistoricalRates(60);
+    expect(rates, isEmpty);
   });
 }

@@ -102,6 +102,17 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
           return results[0].map((p) => p.close).toList();
         },
         fetchExchangeRates: () async {
+          // Fetch daily historical rates from ECB (60 days)
+          final historical = await _hnbService.fetchHistoricalRates(60);
+          if (historical.isNotEmpty) {
+            for (final h in historical) {
+              await _priceRepo.saveExchangeRate(
+                ExchangeRate(date: h.date, usdEur: h.rate),
+              );
+            }
+            _log('fetched ${historical.length} daily ECB rates');
+          }
+          // Also fetch latest as fallback
           final rate = await _hnbService.fetchUsdEurRate();
           return [rate];
         },
@@ -263,11 +274,8 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     // Current period started one cycle before the next change
     final currentPeriodStart = nextChange.subtract(Duration(days: cycle));
 
-    // Find exchange rate closest to currentPeriodStart for the "current" price
-    final ratesBeforePeriod = rates.where((r) => r.date.isBefore(currentPeriodStart)).toList();
-    final currentRate = ratesBeforePeriod.isNotEmpty ? ratesBeforePeriod.last.usdEur : rates.last.usdEur;
     final latestRate = rates.last.usdEur;
-    _log('rates: current=$currentRate (before $currentPeriodStart), latest=$latestRate');
+    _log('rates: ${rates.length} in DB, latest=$latestRate');
 
     for (final ft in FuelType.values) {
       try {
@@ -289,14 +297,14 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         final nextWindowPrices = oilPrices;
 
         // --- Current period price (isPrediction=false) ---
-        // Uses exchange rate from that period, NOT today's rate
+        // Uses daily exchange rates matched to each commodity price date
         if (currentWindowPrices.length >= 10) {
           final count = currentWindowPrices.length < 14 ? currentWindowPrices.length : 14;
           final window = currentWindowPrices.reversed.take(count).toList().reversed.toList();
           final cifCurrent = window.map((p) => p.cifMed * factor).toList();
-          final ratesCurrent = List.generate(cifCurrent.length, (_) => currentRate);
+          final ratesCurrent = window.map((p) => _findRate(rates, p.date)).toList();
           final currentPrice = engine.predictPrice(ft, cifCurrent, ratesCurrent);
-          _log('${ft.name}: current=${currentPrice.toStringAsFixed(4)} (rate=$currentRate, window before $currentPeriodStart)');
+          _log('${ft.name}: current=${currentPrice.toStringAsFixed(4)} (daily rates, window before $currentPeriodStart)');
 
           await _priceRepo.saveFuelPrice(
             FuelPrice(fuelType: ft, date: currentPeriodStart, price: currentPrice, isPrediction: false),
@@ -304,13 +312,13 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         }
 
         // --- Next period price (isPrediction=true) ---
-        // Uses latest exchange rate
+        // Uses daily exchange rates matched to each commodity price date
         final nextCount = nextWindowPrices.length < 14 ? nextWindowPrices.length : 14;
         final nextWindow = nextWindowPrices.reversed.take(nextCount).toList().reversed.toList();
         final cifNext = nextWindow.map((p) => p.cifMed * factor).toList();
-        final ratesNext = List.generate(cifNext.length, (_) => latestRate);
+        final ratesNext = nextWindow.map((p) => _findRate(rates, p.date)).toList();
         final predictedPrice = engine.predictPrice(ft, cifNext, ratesNext);
-        _log('${ft.name}: predicted=${predictedPrice.toStringAsFixed(4)} (next=$nextChange)');
+        _log('${ft.name}: predicted=${predictedPrice.toStringAsFixed(4)} (daily rates, next=$nextChange)');
 
         await _priceRepo.saveFuelPrice(
           FuelPrice(fuelType: ft, date: nextChange, price: predictedPrice, isPrediction: true),
@@ -319,6 +327,21 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         _log('prediction FAILED for ${ft.name}: $e');
       }
     }
+  }
+
+  /// Find the exchange rate closest to (but not after) the given date.
+  /// Falls back to the nearest available rate.
+  static double _findRate(List<ExchangeRate> rates, DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    // Find rates on or before this date
+    ExchangeRate? best;
+    for (final r in rates) {
+      final rDate = DateTime(r.date.year, r.date.month, r.date.day);
+      if (!rDate.isAfter(dateOnly)) {
+        best = r;
+      }
+    }
+    return (best ?? rates.last).usdEur;
   }
 
   @override
