@@ -1,0 +1,63 @@
+name: Check for New Fuel Regulations
+
+on:
+  schedule:
+    # Run weekly on Monday at 08:00 UTC (10:00 CET)
+    - cron: '0 8 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check Narodne Novine for new regulations
+        id: check
+        run: |
+          python scripts/check_regulations.py > /tmp/regulation_check.json 2>&1 || true
+          cat /tmp/regulation_check.json
+          if python -c "import json; d=json.load(open('/tmp/regulation_check.json')); exit(0 if d.get('has_new') else 1)" 2>/dev/null; then
+            echo "has_new=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_new=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub issue if new regulation found
+        if: steps.check.outputs.has_new == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('/tmp/regulation_check.json', 'utf8'));
+            const regs = data.new_regulations || [];
+
+            let body = '## Nova uredba o cijenama goriva\n\n';
+            body += `Trenutna uredba: **${data.current_price_regulation}**\n`;
+            body += `Trenutna trošarina: **${data.current_excise_regulation}**\n\n`;
+            body += '### Pronađene nove uredbe:\n\n';
+
+            for (const reg of regs) {
+              body += `- **${reg.nn_reference}**: ${reg.title}\n`;
+              body += `  - URL: ${reg.url}\n`;
+              if (reg.date) body += `  - Datum: ${reg.date}\n`;
+              body += '\n';
+            }
+
+            body += '\n### Što napraviti:\n\n';
+            body += '1. Otvoriti URL i provjeriti parametre nove uredbe\n';
+            body += '2. Ažurirati `config/fuel_params.json` s novim vrijednostima\n';
+            body += '3. Promijeniti `version` polje na datum nove uredbe\n';
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Nova uredba: ${regs.map(r => r.nn_reference).join(', ')}`,
+              body: body,
+              labels: ['regulation-update'],
+            });

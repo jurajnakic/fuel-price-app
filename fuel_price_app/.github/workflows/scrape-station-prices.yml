@@ -1,0 +1,37 @@
+name: Scrape Station Prices
+
+on:
+  schedule:
+    # Run daily at 07:00 UTC (09:00 CET)
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Scrape fuel prices
+        run: python scripts/scrape_station_prices.py > config/station_prices.json
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git diff --quiet config/station_prices.json && echo "changed=false" >> "$GITHUB_OUTPUT" || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add config/station_prices.json
+          git commit -m "chore: update station prices $(date +%Y-%m-%d)"
+          git push

@@ -33,5 +33,17 @@
     "es100": 0.755,
     "eurodizel": 0.845
   },
-  "vat_rate": 0.25
+  "vat_rate": 0.25,
+  "yahoo_symbols": {
+    "es95": "RB=F",
+    "es100": "RB=F",
+    "eurodizel": "HO=F",
+    "unp_10kg": "BZ=F"
+  },
+  "cif_med_factors": {
+    "es95": 402.4,
+    "es100": 402.4,
+    "eurodizel": 327.0,
+    "unp_10kg": 16.0
+  }
 }
