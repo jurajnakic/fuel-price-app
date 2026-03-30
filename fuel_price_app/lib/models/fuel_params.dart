@@ -33,6 +33,16 @@ class FuelParams {
   final String referenceDate;
   final int cycleDays;
 
+  /// Yahoo Finance symbol per fuel type for CIF Med approximation.
+  /// Gasoline → RBOB (RB=F), Diesel → Heating Oil (HO=F), LPG → Brent (BZ=F).
+  final Map<String, String> yahooSymbols;
+
+  /// Conversion factors: raw Yahoo price → CIF Med USD/tonne.
+  /// RB=F (USD/gal): ×349.9 (gal→tonne) × ~1.15 (CIF Med premium) ≈ 402
+  /// HO=F (USD/gal): ×312.6 (gal→tonne) × ~1.20 (CIF Med premium) ≈ 375
+  /// BZ=F (USD/bbl): ×7.53 (bbl→tonne) × ~2.24 (LPG product factor) ≈ 16.86
+  final Map<String, double> cifMedFactors;
+
   const FuelParams({
     required this.version,
     required this.priceRegulation,
@@ -43,6 +53,18 @@ class FuelParams {
     required this.vatRate,
     this.referenceDate = '2026-03-24',
     this.cycleDays = 14,
+    this.yahooSymbols = const {
+      'es95': 'RB=F',
+      'es100': 'RB=F',
+      'eurodizel': 'HO=F',
+      'unp_10kg': 'BZ=F',
+    },
+    this.cifMedFactors = const {
+      'es95': 402.4,
+      'es100': 402.4,
+      'eurodizel': 327.0,
+      'unp_10kg': 14.12,
+    },
   });
 
   factory FuelParams.fromJson(Map<String, dynamic> json) {
@@ -76,6 +98,24 @@ class FuelParams {
       vatRate: (json['vat_rate'] as num).toDouble(),
       referenceDate: referenceDate,
       cycleDays: cycleDays,
+      yahooSymbols: json.containsKey('yahoo_symbols')
+          ? (json['yahoo_symbols'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, v as String))
+          : const {
+              'es95': 'RB=F',
+              'es100': 'RB=F',
+              'eurodizel': 'HO=F',
+              'unp_10kg': 'BZ=F',
+            },
+      cifMedFactors: json.containsKey('cif_med_factors')
+          ? (json['cif_med_factors'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, (v as num).toDouble()))
+          : const {
+              'es95': 402.4,
+              'es100': 402.4,
+              'eurodizel': 327.0,
+              'unp_10kg': 14.12,
+            },
     );
   }
 

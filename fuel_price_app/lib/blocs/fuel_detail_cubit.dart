@@ -2,15 +2,14 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:fuel_price_app/data/repositories/price_repository.dart';
 import 'package:fuel_price_app/domain/price_cycle_service.dart';
+import 'package:fuel_price_app/models/fuel_params.dart';
 import 'package:fuel_price_app/models/fuel_price.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 
 class FuelDetailState extends Equatable {
   final FuelType fuelType;
-  final double? currentPrice;
   final double? predictedPrice;
-  final String? trend;
-  final DateTime? lastChangeDate;
+  final double? previousPrice;
   final DateTime? nextChangeDate;
   final List<FuelPrice> priceHistory;
   final int chartDays;
@@ -18,10 +17,8 @@ class FuelDetailState extends Equatable {
 
   const FuelDetailState({
     required this.fuelType,
-    this.currentPrice,
     this.predictedPrice,
-    this.trend,
-    this.lastChangeDate,
+    this.previousPrice,
     this.nextChangeDate,
     this.priceHistory = const [],
     this.chartDays = 30,
@@ -29,25 +26,35 @@ class FuelDetailState extends Equatable {
   });
 
   double? get priceDifference =>
-      predictedPrice != null && currentPrice != null
-          ? predictedPrice! - currentPrice!
+      predictedPrice != null && previousPrice != null
+          ? predictedPrice! - previousPrice!
           : null;
+
+  String? get trend {
+    final diff = priceDifference;
+    if (diff == null) return null;
+    if (diff > 0.005) return '↑';
+    if (diff < -0.005) return '↓';
+    return '→';
+  }
 
   @override
   List<Object?> get props => [
-    fuelType, currentPrice, predictedPrice, trend,
-    lastChangeDate, nextChangeDate, priceHistory, chartDays, isLoading,
+    fuelType, predictedPrice, previousPrice, nextChangeDate,
+    priceHistory, chartDays, isLoading,
   ];
 }
 
 class FuelDetailCubit extends Cubit<FuelDetailState> {
   final PriceRepository priceRepo;
+  final FuelParams params;
   final DateTime referenceDate;
   final int cycleDays;
 
   FuelDetailCubit({
     required FuelType fuelType,
     required this.priceRepo,
+    required this.params,
     required this.referenceDate,
     required this.cycleDays,
   }) : super(FuelDetailState(fuelType: fuelType));
@@ -55,23 +62,22 @@ class FuelDetailCubit extends Cubit<FuelDetailState> {
   Future<void> load() async {
     try {
       final ft = state.fuelType;
-      final current = await priceRepo.getLatestPrice(ft, prediction: false);
       final predicted = await priceRepo.getLatestPrice(ft, prediction: true);
-      final history = await priceRepo.getPriceHistory(ft, days: state.chartDays);
+      final current = await priceRepo.getLatestPrice(ft, prediction: false);
 
-      final trend = predicted != null
-          ? trendIndicator(predicted.price, current?.price)
-          : null;
+      final history = await priceRepo.getCalculatedHistory(
+        ft,
+        days: state.chartDays,
+        params: params,
+      );
 
       final nextChange = nextPriceChangeDate(DateTime.now(), referenceDate, cycleDays);
 
       if (!isClosed) {
         emit(FuelDetailState(
           fuelType: ft,
-          currentPrice: current?.roundedPrice,
           predictedPrice: predicted?.roundedPrice,
-          trend: trend,
-          lastChangeDate: current?.date,
+          previousPrice: current?.roundedPrice,
           nextChangeDate: nextChange,
           priceHistory: history,
           chartDays: state.chartDays,
@@ -87,14 +93,16 @@ class FuelDetailCubit extends Cubit<FuelDetailState> {
 
   Future<void> setChartPeriod(int days) async {
     try {
-      final history = await priceRepo.getPriceHistory(state.fuelType, days: days);
+      final history = await priceRepo.getCalculatedHistory(
+        state.fuelType,
+        days: days,
+        params: params,
+      );
       if (!isClosed) {
         emit(FuelDetailState(
           fuelType: state.fuelType,
-          currentPrice: state.currentPrice,
           predictedPrice: state.predictedPrice,
-          trend: state.trend,
-          lastChangeDate: state.lastChangeDate,
+          previousPrice: state.previousPrice,
           nextChangeDate: state.nextChangeDate,
           priceHistory: history,
           chartDays: days,

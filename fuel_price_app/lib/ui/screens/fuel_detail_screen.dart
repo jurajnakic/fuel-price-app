@@ -38,6 +38,7 @@ class FuelDetailPage extends StatelessWidget {
       create: (_) => FuelDetailCubit(
         fuelType: fuelType,
         priceRepo: priceRepo,
+        params: params,
         referenceDate: DateTime.parse(params.referenceDate),
         cycleDays: params.cycleDays,
       )..load(),
@@ -83,27 +84,30 @@ class _DetailBody extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Chart
-          SizedBox(
-            height: 220,
-            child: state.priceHistory.isEmpty
-                ? Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    color: cs.surfaceContainer,
-                    child: Center(
-                      child: Text(
-                        'Nema podataka za prikaz',
-                        style: TextStyle(color: cs.onSurfaceVariant),
+          // Chart — GestureDetector prevents parent PageView swipe while touching the chart
+          GestureDetector(
+            onHorizontalDragStart: (_) {},
+            child: SizedBox(
+              height: 240,
+              child: state.priceHistory.isEmpty
+                  ? Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      color: cs.surfaceContainer,
+                      child: Center(
+                        child: Text(
+                          'Nema podataka za prikaz',
+                          style: TextStyle(color: cs.onSurfaceVariant),
+                        ),
                       ),
-                    ),
-                  )
-                : _PriceChart(prices: state.priceHistory),
+                    )
+                  : _PriceChart(prices: state.priceHistory),
+            ),
           ),
 
           const SizedBox(height: 24),
 
           // Info row at bottom
-          if (state.lastChangeDate != null || state.nextChangeDate != null)
+          if (state.nextChangeDate != null)
             _InfoRow(state: state),
 
           const SizedBox(height: 16),
@@ -152,6 +156,14 @@ class _PredictionCard extends StatelessWidget {
               if (diff != null) ...[
                 const SizedBox(height: 8),
                 _DiffChip(diff: diff, trend: state.trend),
+                const SizedBox(height: 4),
+                Text(
+                  'vs trenutna izračunata cijena',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onPrimaryContainer.withValues(alpha: 0.7),
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ],
           ),
@@ -204,14 +216,6 @@ class _InfoRow extends StatelessWidget {
 
     return Row(
       children: [
-        if (state.lastChangeDate != null)
-          Expanded(
-            child: _InfoTile(
-              icon: Icons.history,
-              label: 'Zadnja izmjena',
-              value: df.format(state.lastChangeDate!),
-            ),
-          ),
         if (state.nextChangeDate != null)
           Expanded(
             child: _InfoTile(
@@ -292,163 +296,148 @@ class _PeriodSelector extends StatelessWidget {
   }
 }
 
-class _PriceChart extends StatefulWidget {
+class _PriceChart extends StatelessWidget {
   final List<FuelPrice> prices;
 
   const _PriceChart({required this.prices});
 
   @override
-  State<_PriceChart> createState() => _PriceChartState();
-}
-
-class _PriceChartState extends State<_PriceChart> {
-  final TransformationController _transformController = TransformationController();
-
-  @override
-  void dispose() {
-    _transformController.dispose();
-    super.dispose();
-  }
-
-  void _resetZoom() {
-    _transformController.value = Matrix4.identity();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final prices = widget.prices;
 
     if (prices.isEmpty) return const SizedBox();
 
-    final spots = prices.asMap().entries.map((e) {
+    // Deduplicate by date (keep last entry per date)
+    final byDate = <String, FuelPrice>{};
+    for (final p in prices) {
+      byDate[p.date.toIso8601String().substring(0, 10)] = p;
+    }
+    final deduped = byDate.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+
+    final spots = deduped.asMap().entries.map((e) {
       return FlSpot(e.key.toDouble(), e.value.roundedPrice);
     }).toList();
 
     final minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b) - 0.05;
     final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) + 0.05;
+    final interval = _calculateInterval(maxY - minY);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: cs.surfaceContainer,
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-            child: InteractiveViewer(
-              transformationController: _transformController,
-              minScale: 1.0,
-              maxScale: 5.0,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: _calculateInterval(maxY - minY),
-                    getDrawingHorizontalLine: (value) => FlLine(
-                      color: cs.outlineVariant.withValues(alpha: 0.3),
-                      strokeWidth: 1,
-                    ),
-                  ),
-                  titlesData: FlTitlesData(
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: (spots.length / 4).ceilToDouble(),
-                        getTitlesWidget: (value, meta) {
-                          final idx = value.toInt();
-                          if (idx < 0 || idx >= prices.length) return const SizedBox();
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              DateFormat('d.M.').format(prices[idx].date),
-                              style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
-                            ),
-                          );
-                        },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 16, 16, 8),
+        child: LineChart(
+          LineChartData(
+            clipData: const FlClipData.all(),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              horizontalInterval: interval,
+              getDrawingHorizontalLine: (value) => FlLine(
+                color: cs.outlineVariant.withValues(alpha: 0.3),
+                strokeWidth: 1,
+              ),
+            ),
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 28,
+                  interval: _bottomInterval(deduped.length),
+                  getTitlesWidget: (value, meta) {
+                    if (value == meta.min || value == meta.max) return const SizedBox();
+                    final idx = value.toInt();
+                    if (idx < 0 || idx >= deduped.length) return const SizedBox();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        DateFormat('d.M.').format(deduped[idx].date),
+                        style: TextStyle(fontSize: 9, color: cs.onSurfaceVariant),
                       ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 44,
-                        interval: _calculateInterval(maxY - minY),
-                        getTitlesWidget: (value, meta) => Text(
-                          value.toStringAsFixed(2),
-                          style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
-                        ),
-                      ),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  minY: minY,
-                  maxY: maxY,
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: spots,
-                      isCurved: true,
-                      curveSmoothness: 0.2,
-                      color: cs.primary,
-                      barWidth: 2.5,
-                      isStrokeCapRound: true,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: cs.primary.withValues(alpha: 0.08),
-                      ),
-                    ),
-                  ],
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (touchedSpots) {
-                        return touchedSpots.map((spot) {
-                          final idx = spot.spotIndex;
-                          final price = prices[idx];
-                          return LineTooltipItem(
-                            '${DateFormat('dd.MM.').format(price.date)}\n${price.roundedPrice.toStringAsFixed(2)} €',
-                            TextStyle(color: cs.onPrimaryContainer, fontSize: 12),
-                          );
-                        }).toList();
-                      },
-                    ),
-                  ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 48,
+                  interval: interval,
+                  getTitlesWidget: (value, meta) {
+                    if (value == meta.min || value == meta.max) return const SizedBox();
+                    return Text(
+                      value.toStringAsFixed(2),
+                      style: TextStyle(fontSize: 9, color: cs.onSurfaceVariant),
+                    );
+                  },
                 ),
               ),
             ),
-          ),
-          // Reset zoom button — only visible when zoomed in
-          Positioned(
-            top: 4,
-            right: 4,
-            child: ListenableBuilder(
-              listenable: _transformController,
-              builder: (context, child) {
-                final isZoomed = _transformController.value.getMaxScaleOnAxis() > 1.05;
-                return isZoomed ? child! : const SizedBox.shrink();
-              },
-              child: IconButton.filledTonal(
-                onPressed: _resetZoom,
-                icon: const Icon(Icons.zoom_out_map, size: 18),
-                tooltip: 'Poništi zum',
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(32, 32),
-                  padding: const EdgeInsets.all(4),
+            borderData: FlBorderData(show: false),
+            minY: minY,
+            maxY: maxY,
+            lineBarsData: [
+              LineChartBarData(
+                spots: spots,
+                isCurved: true,
+                curveSmoothness: 0.2,
+                color: cs.primary,
+                barWidth: 2.5,
+                isStrokeCapRound: true,
+                dotData: const FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: cs.primary.withValues(alpha: 0.08),
                 ),
+              ),
+            ],
+            lineTouchData: LineTouchData(
+              handleBuiltInTouches: true,
+              touchSpotThreshold: 1000,
+              getTouchLineStart: (_, __) => double.infinity,
+              getTouchLineEnd: (_, __) => 0,
+              touchTooltipData: LineTouchTooltipData(
+                tooltipBorder: BorderSide.none,
+                tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                tooltipRoundedRadius: 8,
+                tooltipMargin: 50,
+                fitInsideHorizontally: true,
+                fitInsideVertically: true,
+                getTooltipItems: (touchedSpots) {
+                  return touchedSpots.map((spot) {
+                    final idx = spot.spotIndex;
+                    if (idx < 0 || idx >= deduped.length) return null;
+                    final price = deduped[idx];
+                    return LineTooltipItem(
+                      '${DateFormat('dd.MM.yyyy.').format(price.date)}\n${price.roundedPrice.toStringAsFixed(2)} €',
+                      TextStyle(color: cs.onPrimaryContainer, fontSize: 12, fontWeight: FontWeight.w500),
+                    );
+                  }).toList();
+                },
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  double _calculateInterval(double range) {
+  static double _bottomInterval(int count) {
+    if (count <= 10) return 2;
+    if (count <= 20) return 4;
+    if (count <= 50) return 10;
+    return (count / 5).ceilToDouble();
+  }
+
+  static double _calculateInterval(double range) {
     if (range <= 0.1) return 0.02;
     if (range <= 0.5) return 0.1;
     if (range <= 1.0) return 0.2;
-    return 0.5;
+    if (range <= 2.0) return 0.5;
+    return 1.0;
   }
 }

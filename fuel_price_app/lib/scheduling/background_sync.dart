@@ -10,6 +10,7 @@ import 'package:fuel_price_app/data/services/hnb_service.dart';
 import 'package:fuel_price_app/data/services/remote_config_service.dart';
 import 'package:fuel_price_app/data/services/yahoo_finance_service.dart';
 import 'package:fuel_price_app/domain/formula_engine.dart';
+import 'package:fuel_price_app/domain/price_cycle_service.dart';
 import 'package:fuel_price_app/models/exchange_rate.dart';
 import 'package:fuel_price_app/models/fuel_params.dart';
 import 'package:fuel_price_app/models/fuel_price.dart';
@@ -57,17 +58,22 @@ void callbackDispatcher() {
       final updatedParams = await configRepo.syncConfig();
       final params = updatedParams ?? FuelParams.defaultParams;
 
-      // 3. Fetch oil prices from Yahoo Finance (Brent — BZ=F)
+      // 3. Fetch commodity prices from Yahoo Finance
       final yahoo = YahooFinanceService();
-      final brentPrices = await yahoo.fetchHistoricalPrices('BZ=F', 30);
+      final symbols = ['BZ=F', 'RB=F', 'HO=F'];
+      final allPrices = await Future.wait(
+        symbols.map((s) => yahoo.fetchHistoricalPrices(s, 400)),
+      );
 
-      // Save to DB
-      for (final p in brentPrices) {
-        await priceRepo.saveOilPrice(OilPrice(
-          date: p.date,
-          cifMed: p.close,
-          source: 'BZ=F',
-        ));
+      // Save all symbols to DB with actual dates
+      for (var si = 0; si < symbols.length; si++) {
+        for (final p in allPrices[si]) {
+          await priceRepo.saveOilPrice(OilPrice(
+            date: p.date,
+            cifMed: p.close,
+            source: symbols[si],
+          ));
+        }
       }
 
       // 4. Fetch exchange rates from HNB
@@ -79,32 +85,46 @@ void callbackDispatcher() {
         usdEur: usdEurRate,
       ));
 
-      // 5. Calculate predictions for each fuel type
-      // Use the last 14 days of Brent prices and current exchange rate
-      final recentBrent = brentPrices.length > 14
-          ? brentPrices.sublist(brentPrices.length - 14)
-          : brentPrices;
-
-      if (recentBrent.isEmpty) {
-        await db.close();
-        return true; // No data to calculate, but sync succeeded
-      }
-
-      final cifValues = recentBrent.map((p) => p.close).toList();
-      final rateValues = List.filled(cifValues.length, usdEurRate);
-
+      // 5. Calculate current + predicted prices for each fuel type
       final engine = FormulaEngine(params);
       final predictions = <FuelType, double>{};
+      final refDate = DateTime.parse(params.referenceDate);
+      final cycle = params.cycleDays;
+      final nextChange = nextPriceChangeDate(today, refDate, cycle);
+      final currentPeriodStart = nextChange.subtract(Duration(days: cycle));
 
       for (final fuelType in FuelType.values) {
-        final predicted = engine.predictPrice(fuelType, cifValues, rateValues);
+        final symbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
+        final factor = params.cifMedFactors[fuelType.paramKey] ?? 402.4;
+
+        final symbolPrices = await priceRepo.getOilPrices(symbol, days: 60);
+        if (symbolPrices.isEmpty) continue;
+
+        // Current period price (using prices before currentPeriodStart)
+        final currentWindow = symbolPrices
+            .where((p) => p.date.isBefore(currentPeriodStart))
+            .toList();
+        if (currentWindow.length >= 10) {
+          final count = currentWindow.length < 14 ? currentWindow.length : 14;
+          final window = currentWindow.reversed.take(count).toList().reversed.toList();
+          final cifCurrent = window.map((p) => p.cifMed * factor).toList();
+          final ratesCurrent = List.filled(cifCurrent.length, usdEurRate);
+          final currentPrice = engine.predictPrice(fuelType, cifCurrent, ratesCurrent);
+          await priceRepo.saveFuelPrice(FuelPrice(
+            fuelType: fuelType, date: currentPeriodStart, price: currentPrice, isPrediction: false,
+          ));
+        }
+
+        // Next period prediction (using most recent prices)
+        final nextCount = symbolPrices.length < 14 ? symbolPrices.length : 14;
+        final nextWindow = symbolPrices.reversed.take(nextCount).toList().reversed.toList();
+        final cifNext = nextWindow.map((p) => p.cifMed * factor).toList();
+        final ratesNext = List.filled(cifNext.length, usdEurRate);
+        final predicted = engine.predictPrice(fuelType, cifNext, ratesNext);
         predictions[fuelType] = predicted;
 
         await priceRepo.saveFuelPrice(FuelPrice(
-          fuelType: fuelType,
-          date: today,
-          price: predicted,
-          isPrediction: true,
+          fuelType: fuelType, date: nextChange, price: predicted, isPrediction: true,
         ));
       }
 
@@ -147,8 +167,8 @@ void callbackDispatcher() {
         }
       }
 
-      // 7. Clean old data (keep last 400 days)
-      await priceRepo.cleanOldData(const Duration(days: 400));
+      // 7. Clean old data (keep last 800 days for yearly charts)
+      await priceRepo.cleanOldData(const Duration(days: 800));
 
       await db.close();
       return true;

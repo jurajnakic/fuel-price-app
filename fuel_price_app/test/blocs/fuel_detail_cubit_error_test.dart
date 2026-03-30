@@ -5,12 +5,12 @@ import 'package:fuel_price_app/data/database.dart';
 import 'package:fuel_price_app/data/repositories/price_repository.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/models/fuel_price.dart';
-import 'package:fuel_price_app/models/oil_price.dart';
-import 'package:fuel_price_app/models/exchange_rate.dart';
+import 'package:fuel_price_app/models/fuel_params.dart';
 
 void main() {
   late AppDatabase db;
   late PriceRepository priceRepo;
+  final params = FuelParams.defaultParams;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -29,6 +29,7 @@ void main() {
     final cubit = FuelDetailCubit(
       fuelType: FuelType.es95,
       priceRepo: priceRepo,
+      params: params,
       referenceDate: DateTime(2026, 3, 24),
       cycleDays: 14,
     );
@@ -36,7 +37,6 @@ void main() {
     await cubit.load();
 
     expect(cubit.state.isLoading, false);
-    expect(cubit.state.currentPrice, isNull);
     expect(cubit.state.predictedPrice, isNull);
     expect(cubit.state.priceHistory, isEmpty);
     expect(cubit.state.nextChangeDate, isNotNull);
@@ -44,14 +44,7 @@ void main() {
     await cubit.close();
   });
 
-  test('load with data populates state correctly', () async {
-    // Seed some data
-    await priceRepo.saveFuelPrice(FuelPrice(
-      fuelType: FuelType.es95,
-      date: DateTime(2026, 3, 20),
-      price: 1.45,
-      isPrediction: false,
-    ));
+  test('load with prediction data populates state correctly', () async {
     await priceRepo.saveFuelPrice(FuelPrice(
       fuelType: FuelType.es95,
       date: DateTime(2026, 3, 25),
@@ -62,6 +55,7 @@ void main() {
     final cubit = FuelDetailCubit(
       fuelType: FuelType.es95,
       priceRepo: priceRepo,
+      params: params,
       referenceDate: DateTime(2026, 3, 24),
       cycleDays: 14,
     );
@@ -69,9 +63,7 @@ void main() {
     await cubit.load();
 
     expect(cubit.state.isLoading, false);
-    expect(cubit.state.currentPrice, 1.45);
     expect(cubit.state.predictedPrice, 1.48);
-    expect(cubit.state.trend, isNotNull);
 
     await cubit.close();
   });
@@ -80,6 +72,7 @@ void main() {
     final cubit = FuelDetailCubit(
       fuelType: FuelType.eurodizel,
       priceRepo: priceRepo,
+      params: params,
       referenceDate: DateTime(2026, 3, 24),
       cycleDays: 14,
     );
@@ -99,6 +92,7 @@ void main() {
     final cubit = FuelDetailCubit(
       fuelType: FuelType.es95,
       priceRepo: priceRepo,
+      params: params,
       referenceDate: DateTime(2026, 3, 24),
       cycleDays: 14,
     );
@@ -115,6 +109,7 @@ void main() {
       final cubit = FuelDetailCubit(
         fuelType: ft,
         priceRepo: priceRepo,
+        params: params,
         referenceDate: DateTime(2026, 3, 24),
         cycleDays: 14,
       );

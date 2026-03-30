@@ -192,7 +192,7 @@ class _FuelCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     Text(
-                      displayPrice != null ? 'Trenutna cijena' : 'Nema podataka',
+                      displayPrice != null ? 'Izračunata cijena' : 'Nema podataka',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),

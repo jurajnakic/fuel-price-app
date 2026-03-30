@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 class YahooFinancePrice {
   final DateTime date;
@@ -27,26 +26,33 @@ class YahooFinanceService {
       () => _fetchFromCsvApi(symbol, days),
     ];
 
-    for (final attempt in attempts) {
+    for (var i = 0; i < attempts.length; i++) {
       try {
-        final result = await attempt();
+        _log('trying endpoint ${i + 1}/${attempts.length} for $symbol');
+        final result = await attempts[i]();
         if (result.isNotEmpty) {
-          debugPrint('YahooFinance: got ${result.length} prices for $symbol');
+          _log('got ${result.length} prices for $symbol from endpoint ${i + 1}');
           return result;
         }
+        _log('endpoint ${i + 1} returned empty for $symbol');
       } catch (e) {
-        debugPrint('YahooFinance: attempt failed — $e');
+        _log('endpoint ${i + 1} failed for $symbol — $e');
       }
     }
 
-    debugPrint('YahooFinance: all attempts failed for $symbol');
+    _log('ALL attempts failed for $symbol');
     return [];
   }
 
+  // ignore: avoid_print
+  static void _log(String msg) => print('[YahooFinance] $msg');
+
   /// v8 chart API — JSON, no auth required
   Future<List<YahooFinancePrice>> _fetchFromChartApi(String host, String symbol, int days) async {
+    final url = 'https://$host/v8/finance/chart/$symbol';
+    _log('GET $url?range=${days}d&interval=1d');
     final response = await dio.get(
-      'https://$host/v8/finance/chart/$symbol',
+      url,
       queryParameters: {
         'range': '${days}d',
         'interval': '1d',
@@ -57,6 +63,7 @@ class YahooFinanceService {
       ),
     );
 
+    _log('response status=${response.statusCode} type=${response.data.runtimeType}');
     final data = response.data is String
         ? jsonDecode(response.data as String)
         : response.data;

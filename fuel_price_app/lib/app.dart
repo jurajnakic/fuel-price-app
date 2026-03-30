@@ -84,8 +84,22 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     _syncCubit = DataSyncCubit(
       orchestrator: DataSyncOrchestrator(
         fetchOilPrices: () async {
-          final prices = await _yahooService.fetchHistoricalPrices('BZ=F', 30);
-          return prices.map((p) => p.close).toList();
+          // Fetch all commodity symbols in parallel (400 days for yearly charts)
+          final symbols = ['BZ=F', 'RB=F', 'HO=F'];
+          final results = await Future.wait(
+            symbols.map((s) => _yahooService.fetchHistoricalPrices(s, 400)),
+          );
+          // Save all symbols with actual Yahoo Finance dates
+          for (var si = 0; si < symbols.length; si++) {
+            for (final p in results[si]) {
+              await _priceRepo.saveOilPrice(
+                OilPrice(date: p.date, cifMed: p.close, source: symbols[si]),
+              );
+            }
+          }
+          _log('fetched ${results.map((r) => r.length).toList()} prices for $symbols');
+          // Return BZ=F count as indicator of success
+          return results[0].map((p) => p.close).toList();
         },
         fetchExchangeRates: () async {
           final rate = await _hnbService.fetchUsdEurRate();
@@ -112,22 +126,32 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     _initApp();
   }
 
+  // ignore: avoid_print
+  static void _log(String msg) => print('[AppInit] $msg');
+
   Future<void> _initApp() async {
     try {
       await _settingsCubit.load();
 
-      // Check for existing data
-      final prices = await _priceRepo.getOilPrices('BZ=F', days: 30);
-      if (prices.isNotEmpty) {
+      // Check for existing data — need all 3 symbols (BZ=F, RB=F, HO=F)
+      final brentPrices = await _priceRepo.getOilPrices('BZ=F', days: 30);
+      final rbobPrices = await _priceRepo.getOilPrices('RB=F', days: 30);
+      final hoPrices = await _priceRepo.getOilPrices('HO=F', days: 30);
+      _log('existing: BZ=${brentPrices.length} RB=${rbobPrices.length} HO=${hoPrices.length}');
+
+      final hasAllSymbols = brentPrices.isNotEmpty && rbobPrices.isNotEmpty && hoPrices.isNotEmpty;
+      if (hasAllSymbols) {
         _syncCubit.setHasData(true);
         await _recalculatePredictions();
         await _fuelListCubit.load();
       } else {
+        _log('no existing data — starting sync');
         // First launch — sync real data from APIs
         await _fuelListCubit.load();
         await _syncCubit.sync();
 
-        final afterSync = await _priceRepo.getOilPrices('BZ=F', days: 30);
+        final afterSync = await _priceRepo.getOilPrices('RB=F', days: 30);
+        _log('RB=F after sync: ${afterSync.length}');
         if (afterSync.isNotEmpty) {
           _syncCubit.setHasData(true);
           await _recalculatePredictions();
@@ -147,7 +171,8 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
       if (newParams != null) {
         _activeParams = newParams;
       }
-    } catch (_) {
+    } catch (e) {
+      _log('INIT ERROR: $e');
       // Ensure app is usable even if init partially fails
       await _fuelListCubit.load();
     }
@@ -156,18 +181,12 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
   Future<void> _handleSyncResult(dynamic result) async {
     if (result is! SyncResult) return;
     final syncResult = result;
-
-    // Save oil prices
-    if (syncResult.oilPrices != null && syncResult.oilPrices!.isNotEmpty) {
-      final now = DateTime.now();
-      final prices = syncResult.oilPrices!;
-      for (var i = 0; i < prices.length; i++) {
-        final date = now.subtract(Duration(days: prices.length - 1 - i));
-        await _priceRepo.saveOilPrice(
-          OilPrice(date: date, cifMed: prices[i], source: 'BZ=F'),
-        );
-      }
+    _log('sync result: oil=${syncResult.oilPricesOk} rates=${syncResult.exchangeRatesOk} config=${syncResult.configOk}');
+    if (syncResult.failedSources.isNotEmpty) {
+      _log('FAILED sources: ${syncResult.failedSources}');
     }
+
+    // Oil prices are already saved in the fetchOilPrices callback with actual dates
 
     // Save exchange rate
     if (syncResult.exchangeRates != null && syncResult.exchangeRates!.isNotEmpty) {
@@ -234,37 +253,67 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
 
   Future<void> _recalculatePredictions() async {
     final engine = FormulaEngine(_activeParams);
-    final oilPrices = await _priceRepo.getOilPrices('BZ=F', days: 30);
-    final rates = await _priceRepo.getExchangeRates(days: 30);
+    final rates = await _priceRepo.getExchangeRates(days: 60);
 
-    if (oilPrices.isEmpty || rates.isEmpty) return;
+    if (rates.isEmpty) {
+      _log('SKIP prediction — no exchange rates');
+      return;
+    }
 
-    // Take up to 14 calendar days of oil prices (use what we have)
-    final count = oilPrices.length < 14 ? oilPrices.length : 14;
-    final recentOil = oilPrices.reversed.take(count).toList().reversed.toList();
     final lastRate = rates.last.usdEur;
-
-    final cifValues = recentOil.map((p) => p.cifMed).toList();
-    final rateValues = List.generate(cifValues.length, (_) => lastRate);
+    final refDate = DateTime.parse(_activeParams.referenceDate);
+    final cycle = _activeParams.cycleDays;
+    final now = DateTime.now();
+    final nextChange = nextPriceChangeDate(now, refDate, cycle);
+    // Current period started one cycle before the next change
+    final currentPeriodStart = nextChange.subtract(Duration(days: cycle));
 
     for (final ft in FuelType.values) {
       try {
-        final price = engine.predictPrice(ft, cifValues, rateValues);
-        final nextChangeDate = nextPriceChangeDate(
-          DateTime.now(),
-          DateTime.parse(_activeParams.referenceDate),
-          _activeParams.cycleDays,
-        );
+        final symbol = _activeParams.yahooSymbols[ft.paramKey] ?? 'BZ=F';
+        final factor = _activeParams.cifMedFactors[ft.paramKey] ?? 402.4;
+        final oilPrices = await _priceRepo.getOilPrices(symbol, days: 60);
+
+        if (oilPrices.isEmpty) {
+          _log('SKIP ${ft.name} — no prices for $symbol');
+          continue;
+        }
+
+        // Split prices into two windows:
+        // "Current" window: prices BEFORE currentPeriodStart (determined current official price)
+        // "Next" window: most recent 14 prices (will determine next price)
+        final currentWindowPrices = oilPrices
+            .where((p) => p.date.isBefore(currentPeriodStart))
+            .toList();
+        final nextWindowPrices = oilPrices;
+
+        // --- Current period price (isPrediction=false) ---
+        if (currentWindowPrices.length >= 10) {
+          final count = currentWindowPrices.length < 14 ? currentWindowPrices.length : 14;
+          final window = currentWindowPrices.reversed.take(count).toList().reversed.toList();
+          final cifCurrent = window.map((p) => p.cifMed * factor).toList();
+          final ratesCurrent = List.generate(cifCurrent.length, (_) => lastRate);
+          final currentPrice = engine.predictPrice(ft, cifCurrent, ratesCurrent);
+          _log('${ft.name}: current=${currentPrice.toStringAsFixed(4)} (window before $currentPeriodStart)');
+
+          await _priceRepo.saveFuelPrice(
+            FuelPrice(fuelType: ft, date: currentPeriodStart, price: currentPrice, isPrediction: false),
+          );
+        }
+
+        // --- Next period price (isPrediction=true) ---
+        final nextCount = nextWindowPrices.length < 14 ? nextWindowPrices.length : 14;
+        final nextWindow = nextWindowPrices.reversed.take(nextCount).toList().reversed.toList();
+        final cifNext = nextWindow.map((p) => p.cifMed * factor).toList();
+        final ratesNext = List.generate(cifNext.length, (_) => lastRate);
+        final predictedPrice = engine.predictPrice(ft, cifNext, ratesNext);
+        _log('${ft.name}: predicted=${predictedPrice.toStringAsFixed(4)} (next=$nextChange)');
+
         await _priceRepo.saveFuelPrice(
-          FuelPrice(
-            fuelType: ft,
-            date: nextChangeDate,
-            price: price,
-            isPrediction: true,
-          ),
+          FuelPrice(fuelType: ft, date: nextChange, price: predictedPrice, isPrediction: true),
         );
-      } catch (_) {
-        // Skip fuel types that can't be calculated
+      } catch (e) {
+        _log('prediction FAILED for ${ft.name}: $e');
       }
     }
   }
