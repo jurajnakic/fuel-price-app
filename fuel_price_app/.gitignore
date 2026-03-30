@@ -44,5 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Signing keys — NIKAD ne commitirati!
+android/key.properties
+android/app/*.jks
+
 # Superpowers
 .superpowers/
