@@ -1,0 +1,75 @@
+{
+  "version": "2025-02-26",
+  "price_cycle": {
+    "reference_date": "2026-03-24",
+    "cycle_days": 14
+  },
+  "price_regulation": {
+    "name": "Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata",
+    "nn_reference": "NN 31/2025",
+    "effective_date": "2025-02-26",
+    "nn_url": "https://narodne-novine.nn.hr/clanci/sluzbeni/full/2025_02_31_326.html"
+  },
+  "excise_regulation": {
+    "name": "Uredba o visini trošarine na energente i električnu energiju",
+    "nn_reference": "NN 156/2022 (konsolidirana)",
+    "effective_date": "2023-01-01",
+    "note": "Vlada periodički mijenja visinu trošarine zasebnim uredbama"
+  },
+  "premiums": {
+    "es95": 0.1545,
+    "es100": 0.1545,
+    "eurodizel": 0.1545,
+    "unp_10kg": 0.8429
+  },
+  "excise_duties": {
+    "es95": 0.4560,
+    "es100": 0.4560,
+    "eurodizel": 0.40613,
+    "unp_10kg": 0.01327
+  },
+  "density": {
+    "es95": 0.755,
+    "es100": 0.755,
+    "eurodizel": 0.845
+  },
+  "vat_rate": 0.25,
+  "yahoo_symbols": {
+    "es95": "RB=F",
+    "es100": "RB=F",
+    "eurodizel": "HO=F",
+    "unp_10kg": "BZ=F"
+  },
+  "cif_med_factors": {
+    "es95": 402.4,
+    "es100": 402.4,
+    "eurodizel": 327.0,
+    "unp_10kg": 16.0
+  },
+  "eia_api_key": "REPLACE_WITH_REAL_KEY",
+  "oil_price_api_key": "REPLACE_WITH_REAL_KEY",
+  "eia_symbols": {
+    "es95": "EER_EPMRU_PF4_Y35NY_DPG",
+    "es100": "EER_EPMRU_PF4_Y35NY_DPG",
+    "eurodizel": "EER_EPD2DXL0_PF4_Y35NY_DPG",
+    "unp_10kg": "EER_EPLLPA_PF4_Y44MB_DPG"
+  },
+  "oil_api_symbols": {
+    "eurodizel": "MGO_05S_NLRTM_USD"
+  },
+  "eia_cif_med_factors": {
+    "es95": 390.0,
+    "es100": 390.0,
+    "eurodizel": 320.0,
+    "unp_10kg": 280.0
+  },
+  "oil_api_cif_med_factors": {
+    "eurodizel": 1.05
+  },
+  "source_weights": {
+    "es95": {"yahoo": 0.5, "eia": 0.5},
+    "es100": {"yahoo": 0.5, "eia": 0.5},
+    "eurodizel": {"yahoo": 0.3, "eia": 0.2, "oilapi": 0.5},
+    "unp_10kg": {"yahoo": 0.5, "eia": 0.5}
+  }
+}
