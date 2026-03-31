@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:fuel_price_app/data/repositories/settings_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsState extends Equatable {
   final ThemeMode themeMode;
@@ -55,16 +56,32 @@ class SettingsCubit extends Cubit<SettingsState> {
     final notifFuels = await settingsRepo.getNotificationFuels();
     final notifSettings = await settingsRepo.getNotificationSettings();
 
+    final prefs = await SharedPreferences.getInstance();
+    final savedTheme = prefs.getString('theme_mode');
+    final themeMode = switch (savedTheme) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+
     emit(state.copyWith(
       fuelVisibility: visibility,
       notificationFuels: notifFuels,
       notificationDay: notifSettings['day'] as String,
       notificationHour: notifSettings['hour'] as int,
       notificationsEnabled: (notifSettings['enabled'] as int) == 1,
+      themeMode: themeMode,
     ));
   }
 
-  void setThemeMode(ThemeMode mode) {
+  Future<void> setThemeMode(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = switch (mode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+    };
+    await prefs.setString('theme_mode', value);
     emit(state.copyWith(themeMode: mode));
   }
 
