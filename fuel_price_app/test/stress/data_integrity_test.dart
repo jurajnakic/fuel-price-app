@@ -52,6 +52,8 @@ void main() {
         fetchOilPrices: () async => throw Exception('fail'),
         fetchExchangeRates: () async => throw Exception('fail'),
         fetchConfig: () async => throw Exception('fail'),
+        fetchEiaSpotPrices: () async => throw Exception('fail'),
+        fetchOilApiPrices: () async => throw Exception('fail'),
         timeout: const Duration(seconds: 1),
       );
       final result = await orchestrator.sync();

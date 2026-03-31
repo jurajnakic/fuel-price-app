@@ -9,6 +9,8 @@ void main() {
         fetchOilPrices: () => Future.delayed(const Duration(seconds: 15), () => [1.0]),
         fetchExchangeRates: () => Future.delayed(const Duration(seconds: 15), () => [0.92]),
         fetchConfig: () => Future.delayed(const Duration(seconds: 15), () => <String, dynamic>{}),
+        fetchEiaSpotPrices: () => Future.delayed(const Duration(seconds: 15), () => [1.0]),
+        fetchOilApiPrices: () => Future.delayed(const Duration(seconds: 15), () => [1.0]),
         timeout: const Duration(seconds: 2),
       );
       final result = await orchestrator.sync();
@@ -36,6 +38,8 @@ void main() {
         fetchOilPrices: () async => throw Exception('fail'),
         fetchExchangeRates: () async => throw Exception('fail'),
         fetchConfig: () async => throw Exception('fail'),
+        fetchEiaSpotPrices: () async => throw Exception('fail'),
+        fetchOilApiPrices: () async => throw Exception('fail'),
         timeout: const Duration(seconds: 1),
       );
       for (int i = 0; i < 3; i++) {
