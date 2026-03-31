@@ -44,6 +44,8 @@ void main() {
         fetchOilPrices: () async => throw Exception('fail'),
         fetchExchangeRates: () async => throw Exception('fail'),
         fetchConfig: () async => throw Exception('fail'),
+        fetchEiaSpotPrices: () async => throw Exception('fail'),
+        fetchOilApiPrices: () async => throw Exception('fail'),
         timeout: const Duration(seconds: 2),
       );
       final result = await orchestrator.sync();
@@ -93,6 +95,50 @@ void main() {
       expect(result.oilPrices, [1.0, 2.0]);
       expect(result.exchangeRates, isNull);
       expect(result.config, {'version': '1'});
+    });
+
+    test('EIA and OilAPI sources run in parallel with existing sources', () async {
+      final orchestrator = DataSyncOrchestrator(
+        fetchOilPrices: () async => [1.0],
+        fetchExchangeRates: () async => [0.92],
+        fetchConfig: () async => {'version': '1'},
+        fetchEiaSpotPrices: () async => [2.45],
+        fetchOilApiPrices: () async => [720.0],
+        timeout: const Duration(seconds: 2),
+      );
+      final result = await orchestrator.sync();
+      expect(result.isFullSuccess, isTrue);
+      expect(result.eiaSpotOk, isTrue);
+      expect(result.oilApiOk, isTrue);
+    });
+
+    test('EIA failure does not affect other sources', () async {
+      final orchestrator = DataSyncOrchestrator(
+        fetchOilPrices: () async => [1.0],
+        fetchExchangeRates: () async => [0.92],
+        fetchConfig: () async => {'version': '1'},
+        fetchEiaSpotPrices: () async => throw Exception('EIA down'),
+        fetchOilApiPrices: () async => [720.0],
+        timeout: const Duration(seconds: 2),
+      );
+      final result = await orchestrator.sync();
+      expect(result.oilPricesOk, isTrue);
+      expect(result.eiaSpotOk, isFalse);
+      expect(result.oilApiOk, isTrue);
+      expect(result.failedSources, contains('eiaSpot'));
+    });
+
+    test('orchestrator works without optional source callbacks', () async {
+      final orchestrator = DataSyncOrchestrator(
+        fetchOilPrices: () async => [1.0],
+        fetchExchangeRates: () async => [0.92],
+        fetchConfig: () async => {'version': '1'},
+        timeout: const Duration(seconds: 2),
+      );
+      final result = await orchestrator.sync();
+      expect(result.oilPricesOk, isTrue);
+      expect(result.eiaSpotOk, isTrue); // null callback = auto-success
+      expect(result.oilApiOk, isTrue);
     });
   });
 }
