@@ -8,6 +8,7 @@ import 'package:fuel_price_app/blocs/fuel_list_cubit.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/models/fuel_params.dart';
 import 'package:fuel_price_app/ui/widgets/disclaimer_dialog.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -55,10 +56,16 @@ class SettingsScreen extends StatelessWidget {
                 title: const Text('Formula za izračun'),
                 onTap: () => _showFormulaDialog(context),
               ),
-              const ListTile(
-                leading: Icon(Icons.tag),
-                title: Text('Verzija'),
-                subtitle: Text('2.0.0'),
+              FutureBuilder(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final version = snapshot.data?.version ?? '...';
+                  return ListTile(
+                    leading: const Icon(Icons.tag),
+                    title: const Text('Verzija'),
+                    subtitle: Text(version),
+                  );
+                },
               ),
               const SizedBox(height: 32),
             ],
@@ -227,8 +234,11 @@ class SettingsScreen extends StatelessWidget {
             '• n — broj dana u obračunskom razdoblju (14)\n'
             '• P — premija\n'
             '• 1,25 — PDV 25%\n\n'
-            'Izvor cijena: Yahoo Finance (BZ=F)\n'
-            'Izvor tečaja: HNB API',
+            'Izvori cijena:\n'
+            '• Yahoo Finance (RB=F, HO=F, BZ=F)\n'
+            '• EIA (američki spot cijene)\n'
+            '• OilPriceAPI (Rotterdam/europske cijene)\n\n'
+            'Izvor tečaja: ECB / HNB API',
           ),
         ),
         actions: [
