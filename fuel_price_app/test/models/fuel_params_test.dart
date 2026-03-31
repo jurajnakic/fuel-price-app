@@ -114,4 +114,61 @@ void main() {
       expect(params.referenceDate, '2026-03-24');
     });
   });
+
+  group('FuelParams multi-source config', () {
+    Map<String, dynamic> _baseJson() => {
+      'version': '2025-02-26',
+      'price_regulation': {
+        'name': 'Test', 'nn_reference': 'NN 1/2025', 'effective_date': '2025-01-01',
+      },
+      'excise_regulation': {
+        'name': 'Test Excise', 'nn_reference': 'NN 2/2025', 'effective_date': '2025-01-01',
+      },
+      'premiums': {'es95': 0.1},
+      'excise_duties': {'es95': 0.4},
+      'density': {'es95': 0.755},
+      'vat_rate': 0.25,
+    };
+
+    test('fromJson uses defaults when EIA/OilAPI fields missing', () {
+      final params = FuelParams.fromJson(_baseJson());
+      expect(params.eiaApiKey, isNotEmpty);
+      expect(params.oilPriceApiKey, isNotEmpty);
+      expect(params.eiaSymbols, isNotEmpty);
+      expect(params.eiaSymbols['es95'], 'EER_EPMRU_PF4_Y35NY_DPG');
+      expect(params.oilApiSymbols['eurodizel'], 'MGO_05S_NLRTM_USD');
+      expect(params.eiaCifMedFactors, isNotEmpty);
+      expect(params.oilApiCifMedFactors, isNotEmpty);
+      expect(params.sourceWeights, isNotEmpty);
+      expect(params.sourceWeights['eurodizel']!['oilapi'], 0.5);
+    });
+
+    test('fromJson parses EIA/OilAPI fields from JSON', () {
+      final json = _baseJson()
+        ..['eia_api_key'] = 'my-eia-key'
+        ..['oil_price_api_key'] = 'my-oil-key'
+        ..['eia_symbols'] = {'es95': 'CUSTOM_SERIES'}
+        ..['eia_cif_med_factors'] = {'es95': 999.0}
+        ..['oil_api_symbols'] = {'eurodizel': 'CUSTOM_OIL'}
+        ..['oil_api_cif_med_factors'] = {'eurodizel': 1.1}
+        ..['source_weights'] = {
+          'es95': {'yahoo': 0.7, 'eia': 0.3},
+        };
+      final params = FuelParams.fromJson(json);
+      expect(params.eiaApiKey, 'my-eia-key');
+      expect(params.oilPriceApiKey, 'my-oil-key');
+      expect(params.eiaSymbols['es95'], 'CUSTOM_SERIES');
+      expect(params.eiaCifMedFactors['es95'], 999.0);
+      expect(params.oilApiSymbols['eurodizel'], 'CUSTOM_OIL');
+      expect(params.oilApiCifMedFactors['eurodizel'], 1.1);
+      expect(params.sourceWeights['es95']!['yahoo'], 0.7);
+    });
+
+    test('defaultParams has multi-source defaults', () {
+      final p = FuelParams.defaultParams;
+      expect(p.eiaSymbols['eurodizel'], 'EER_EPD2DXL0_PF4_Y35NY_DPG');
+      expect(p.oilApiSymbols['eurodizel'], 'MGO_05S_NLRTM_USD');
+      expect(p.sourceWeights['eurodizel']!['oilapi'], 0.5);
+    });
+  });
 }

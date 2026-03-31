@@ -43,6 +43,28 @@ class FuelParams {
   /// BZ=F (USD/bbl): ×7.33 (bbl→tonne) × ~2.18 (LPG product/CIF Med factor) ≈ 16.0
   final Map<String, double> cifMedFactors;
 
+  /// EIA API key (hardcoded default, overridable via remote config)
+  final String eiaApiKey;
+
+  /// OilPriceAPI key (hardcoded default, overridable via remote config)
+  final String oilPriceApiKey;
+
+  /// EIA series ID per fuel type
+  final Map<String, String> eiaSymbols;
+
+  /// OilPriceAPI commodity code per fuel type
+  final Map<String, String> oilApiSymbols;
+
+  /// CIF Med conversion factors for EIA spot prices
+  final Map<String, double> eiaCifMedFactors;
+
+  /// CIF Med conversion factors for OilPriceAPI prices
+  final Map<String, double> oilApiCifMedFactors;
+
+  /// Source weights per fuel type: maps source name → weight
+  /// Sources: "yahoo", "eia", "oilapi". Normalized at runtime.
+  final Map<String, Map<String, double>> sourceWeights;
+
   const FuelParams({
     required this.version,
     required this.priceRegulation,
@@ -64,6 +86,32 @@ class FuelParams {
       'es100': 402.4,
       'eurodizel': 327.0,
       'unp_10kg': 16.0,
+    },
+    this.eiaApiKey = 'REPLACE_WITH_REAL_KEY',
+    this.oilPriceApiKey = 'REPLACE_WITH_REAL_KEY',
+    this.eiaSymbols = const {
+      'es95': 'EER_EPMRU_PF4_Y35NY_DPG',
+      'es100': 'EER_EPMRU_PF4_Y35NY_DPG',
+      'eurodizel': 'EER_EPD2DXL0_PF4_Y35NY_DPG',
+      'unp_10kg': 'EER_EPLLPA_PF4_Y44MB_DPG',
+    },
+    this.oilApiSymbols = const {
+      'eurodizel': 'MGO_05S_NLRTM_USD',
+    },
+    this.eiaCifMedFactors = const {
+      'es95': 390.0,
+      'es100': 390.0,
+      'eurodizel': 320.0,
+      'unp_10kg': 280.0,
+    },
+    this.oilApiCifMedFactors = const {
+      'eurodizel': 1.05,
+    },
+    this.sourceWeights = const {
+      'es95': {'yahoo': 0.5, 'eia': 0.5},
+      'es100': {'yahoo': 0.5, 'eia': 0.5},
+      'eurodizel': {'yahoo': 0.3, 'eia': 0.2, 'oilapi': 0.5},
+      'unp_10kg': {'yahoo': 0.5, 'eia': 0.5},
     },
   });
 
@@ -115,6 +163,57 @@ class FuelParams {
               'es100': 402.4,
               'eurodizel': 327.0,
               'unp_10kg': 16.0,
+            },
+      eiaApiKey: json.containsKey('eia_api_key')
+          ? json['eia_api_key'] as String
+          : 'REPLACE_WITH_REAL_KEY',
+      oilPriceApiKey: json.containsKey('oil_price_api_key')
+          ? json['oil_price_api_key'] as String
+          : 'REPLACE_WITH_REAL_KEY',
+      eiaSymbols: json.containsKey('eia_symbols')
+          ? (json['eia_symbols'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, v as String))
+          : const {
+              'es95': 'EER_EPMRU_PF4_Y35NY_DPG',
+              'es100': 'EER_EPMRU_PF4_Y35NY_DPG',
+              'eurodizel': 'EER_EPD2DXL0_PF4_Y35NY_DPG',
+              'unp_10kg': 'EER_EPLLPA_PF4_Y44MB_DPG',
+            },
+      oilApiSymbols: json.containsKey('oil_api_symbols')
+          ? (json['oil_api_symbols'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, v as String))
+          : const {
+              'eurodizel': 'MGO_05S_NLRTM_USD',
+            },
+      eiaCifMedFactors: json.containsKey('eia_cif_med_factors')
+          ? (json['eia_cif_med_factors'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, (v as num).toDouble()))
+          : const {
+              'es95': 390.0,
+              'es100': 390.0,
+              'eurodizel': 320.0,
+              'unp_10kg': 280.0,
+            },
+      oilApiCifMedFactors: json.containsKey('oil_api_cif_med_factors')
+          ? (json['oil_api_cif_med_factors'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, (v as num).toDouble()))
+          : const {
+              'eurodizel': 1.05,
+            },
+      sourceWeights: json.containsKey('source_weights')
+          ? (json['source_weights'] as Map<String, dynamic>).map(
+              (k, v) => MapEntry(
+                k,
+                (v as Map<String, dynamic>).map(
+                  (sk, sv) => MapEntry(sk, (sv as num).toDouble()),
+                ),
+              ),
+            )
+          : const {
+              'es95': {'yahoo': 0.5, 'eia': 0.5},
+              'es100': {'yahoo': 0.5, 'eia': 0.5},
+              'eurodizel': {'yahoo': 0.3, 'eia': 0.2, 'oilapi': 0.5},
+              'unp_10kg': {'yahoo': 0.5, 'eia': 0.5},
             },
     );
   }
