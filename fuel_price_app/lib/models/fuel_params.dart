@@ -79,19 +79,19 @@ class FuelParams {
     this.yahooSymbols = const {
       'es95': 'RB=F',
       'es100': 'RB=F',
-      'eurodizel': 'HO=F',
+      'eurodizel': 'BZ=F',
       'unp_10kg': 'BZ=F',
     },
     this.cifMedFactors = const {
-      'es95': 369.0,
-      'es100': 369.0,
-      'eurodizel': 308.0,
+      'es95': 300.0,
+      'es100': 300.0,
+      'eurodizel': 6.04,
       'unp_10kg': 16.2,
     },
     this.cifMedOffsets = const {
-      'es95': 75.0,
-      'es100': 75.0,
-      'eurodizel': 105.0,
+      'es95': 259.0,
+      'es100': 259.0,
+      'eurodizel': 648.0,
       'unp_10kg': 12.5,
     },
     this.eiaApiKey = 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
@@ -121,10 +121,10 @@ class FuelParams {
       'eurodizel': 1.05,
     },
     this.sourceWeights = const {
-      'es95': {'yahoo': 0.80, 'eia': 0.20},
-      'es100': {'yahoo': 0.80, 'eia': 0.20},
-      'eurodizel': {'yahoo': 0.85, 'eia': 0.05, 'oilapi': 0.10},
-      'unp_10kg': {'yahoo': 0.30, 'eia': 0.70},
+      'es95': {'yahoo': 1.0},
+      'es100': {'yahoo': 1.0},
+      'eurodizel': {'yahoo': 1.0},
+      'unp_10kg': {'eia': 1.0},
     },
   });
 
@@ -165,25 +165,25 @@ class FuelParams {
           : const {
               'es95': 'RB=F',
               'es100': 'RB=F',
-              'eurodizel': 'HO=F',
+              'eurodizel': 'BZ=F',
               'unp_10kg': 'BZ=F',
             },
       cifMedFactors: json.containsKey('cif_med_factors')
           ? (json['cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
           : const {
-              'es95': 369.0,
-              'es100': 369.0,
-              'eurodizel': 308.0,
+              'es95': 300.0,
+              'es100': 300.0,
+              'eurodizel': 6.04,
               'unp_10kg': 16.2,
             },
       cifMedOffsets: json.containsKey('cif_med_offsets')
           ? (json['cif_med_offsets'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
           : const {
-              'es95': 75.0,
-              'es100': 75.0,
-              'eurodizel': 105.0,
+              'es95': 259.0,
+              'es100': 259.0,
+              'eurodizel': 648.0,
               'unp_10kg': 12.5,
             },
       eiaApiKey: json.containsKey('eia_api_key')
@@ -241,10 +241,10 @@ class FuelParams {
               ),
             )
           : const {
-              'es95': {'yahoo': 0.80, 'eia': 0.20},
-              'es100': {'yahoo': 0.80, 'eia': 0.20},
-              'eurodizel': {'yahoo': 0.85, 'eia': 0.05, 'oilapi': 0.10},
-              'unp_10kg': {'yahoo': 0.30, 'eia': 0.70},
+              'es95': {'yahoo': 1.0},
+              'es100': {'yahoo': 1.0},
+              'eurodizel': {'yahoo': 1.0},
+              'unp_10kg': {'eia': 1.0},
             },
     );
   }
