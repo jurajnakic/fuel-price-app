@@ -288,7 +288,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         // Collect predictions from each source
         // Yahoo
         final yahooSymbol = _activeParams.yahooSymbols[ft.paramKey] ?? 'BZ=F';
-        final yahooFactor = _activeParams.cifMedFactors[ft.paramKey] ?? 402.4;
+        final yahooFactor = _activeParams.cifMedFactors[ft.paramKey] ?? 399.0;
         final yahooPrices = await _priceRepo.getOilPrices(yahooSymbol, days: 60);
 
         // EIA
@@ -306,18 +306,20 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
             : <OilPrice>[];
 
         // Helper to compute price from a source's prices.
-        // [minPoints] is the minimum data points needed for current period
-        // (10 for daily sources like Yahoo/EIA, 1 for sparse sources like OilPriceAPI).
-        double? computePrice(List<OilPrice> prices, double factor, bool isCurrent, {int minPoints = 10}) {
+        // Uses a 14-calendar-day observation window per NN 31/2025.
+        // [minPoints] is the minimum data points needed
+        // (5 for daily sources like Yahoo/EIA, 1 for sparse sources like OilPriceAPI).
+        double? computePrice(List<OilPrice> prices, double factor, bool isCurrent, {int minPoints = 5}) {
           if (prices.isEmpty) return null;
-          final window = isCurrent
-              ? prices.where((p) => p.date.isBefore(currentPeriodStart)).toList()
-              : prices;
-          if (window.length < (isCurrent ? minPoints : 1)) return null;
-          final count = window.length < 14 ? window.length : 14;
-          final slice = window.reversed.take(count).toList().reversed.toList();
-          final cifMed = slice.map((p) => p.cifMed * factor).toList();
-          final ratesList = slice.map((p) => _findRate(rates, p.date)).toList();
+          // Observation window: 14 calendar days (= one price cycle)
+          final windowEnd = isCurrent ? currentPeriodStart : nextChange;
+          final windowStart = windowEnd.subtract(Duration(days: cycle));
+          final window = prices
+              .where((p) => !p.date.isBefore(windowStart) && p.date.isBefore(windowEnd))
+              .toList();
+          if (window.length < minPoints) return null;
+          final cifMed = window.map((p) => p.cifMed * factor).toList();
+          final ratesList = window.map((p) => _findRate(rates, p.date)).toList();
           return engine.predictPrice(ft, cifMed, ratesList);
         }
 

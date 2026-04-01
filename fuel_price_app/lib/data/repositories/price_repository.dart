@@ -88,7 +88,7 @@ class PriceRepository {
     int windowSize = 14,
   }) async {
     final symbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
-    final factor = params.cifMedFactors[fuelType.paramKey] ?? 402.4;
+    final factor = params.cifMedFactors[fuelType.paramKey] ?? 399.0;
 
     final oilPrices = await getOilPrices(symbol, days: days + windowSize);
     final rates = await getExchangeRates(days: days + windowSize);

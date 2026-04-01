@@ -82,10 +82,10 @@ class FuelParams {
       'unp_10kg': 'BZ=F',
     },
     this.cifMedFactors = const {
-      'es95': 402.4,
-      'es100': 402.4,
-      'eurodizel': 327.0,
-      'unp_10kg': 16.0,
+      'es95': 399.0,
+      'es100': 399.0,
+      'eurodizel': 338.0,
+      'unp_10kg': 16.4,
     },
     this.eiaApiKey = 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
     this.oilPriceApiKey = '3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce',
@@ -111,7 +111,7 @@ class FuelParams {
       'es95': {'yahoo': 0.80, 'eia': 0.20},
       'es100': {'yahoo': 0.80, 'eia': 0.20},
       'eurodizel': {'yahoo': 0.85, 'eia': 0.05, 'oilapi': 0.10},
-      'unp_10kg': {'yahoo': 0.70, 'eia': 0.30},
+      'unp_10kg': {'yahoo': 0.50, 'eia': 0.50},
     },
   });
 
@@ -159,10 +159,10 @@ class FuelParams {
           ? (json['cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
           : const {
-              'es95': 402.4,
-              'es100': 402.4,
-              'eurodizel': 327.0,
-              'unp_10kg': 16.0,
+              'es95': 399.0,
+              'es100': 399.0,
+              'eurodizel': 338.0,
+              'unp_10kg': 16.4,
             },
       eiaApiKey: json.containsKey('eia_api_key')
           ? json['eia_api_key'] as String
@@ -213,7 +213,7 @@ class FuelParams {
               'es95': {'yahoo': 0.80, 'eia': 0.20},
               'es100': {'yahoo': 0.80, 'eia': 0.20},
               'eurodizel': {'yahoo': 0.85, 'eia': 0.05, 'oilapi': 0.10},
-              'unp_10kg': {'yahoo': 0.70, 'eia': 0.30},
+              'unp_10kg': {'yahoo': 0.50, 'eia': 0.50},
             },
     );
   }

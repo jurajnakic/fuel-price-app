@@ -143,34 +143,40 @@ void callbackDispatcher() {
       final ratesBeforePeriod = allRates.where((r) => r.date.isBefore(currentPeriodStart)).toList();
       final currentRate = ratesBeforePeriod.isNotEmpty ? ratesBeforePeriod.last.usdEur : usdEurRate;
 
+      // Helper: filter prices to a 14-calendar-day window per NN 31/2025.
+      List<OilPrice> windowFilter(List<OilPrice> prices, DateTime windowEnd) {
+        final windowStart = windowEnd.subtract(Duration(days: cycle));
+        return prices
+            .where((p) => !p.date.isBefore(windowStart) && p.date.isBefore(windowEnd))
+            .toList();
+      }
+
       for (final fuelType in FuelType.values) {
         final weights = params.sourceWeights[fuelType.paramKey] ?? {'yahoo': 1.0};
 
-        // Collect current period predictions
+        // Collect current + next period predictions
         final currentSourcePrices = <String, double>{};
         final nextSourcePrices = <String, double>{};
 
+        // Helper: compute price for a source in a given window
+        double? computeSource(List<OilPrice> prices, double factor, DateTime windowEnd, double rate, {int minPoints = 5}) {
+          final window = windowFilter(prices, windowEnd);
+          if (window.length < minPoints) return null;
+          final cif = window.map((p) => p.cifMed * factor).toList();
+          final rates = List.filled(cif.length, rate);
+          return engine.predictPrice(fuelType, cif, rates);
+        }
+
         // Yahoo
         final yahooSymbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
-        final yahooFactor = params.cifMedFactors[fuelType.paramKey] ?? 402.4;
+        final yahooFactor = params.cifMedFactors[fuelType.paramKey] ?? 399.0;
         final symbolPrices = await priceRepo.getOilPrices(yahooSymbol, days: 60);
 
         if (symbolPrices.isNotEmpty) {
-          // Current period
-          final currentWindow = symbolPrices.where((p) => p.date.isBefore(currentPeriodStart)).toList();
-          if (currentWindow.length >= 10) {
-            final count = currentWindow.length < 14 ? currentWindow.length : 14;
-            final window = currentWindow.reversed.take(count).toList().reversed.toList();
-            final cifCurrent = window.map((p) => p.cifMed * yahooFactor).toList();
-            final ratesCurrent = List.filled(cifCurrent.length, currentRate);
-            currentSourcePrices['yahoo'] = engine.predictPrice(fuelType, cifCurrent, ratesCurrent);
-          }
-          // Next period
-          final nextCount = symbolPrices.length < 14 ? symbolPrices.length : 14;
-          final nextWindow = symbolPrices.reversed.take(nextCount).toList().reversed.toList();
-          final cifNext = nextWindow.map((p) => p.cifMed * yahooFactor).toList();
-          final ratesNext = List.filled(cifNext.length, usdEurRate);
-          nextSourcePrices['yahoo'] = engine.predictPrice(fuelType, cifNext, ratesNext);
+          final yc = computeSource(symbolPrices, yahooFactor, currentPeriodStart, currentRate);
+          if (yc != null) currentSourcePrices['yahoo'] = yc;
+          final yn = computeSource(symbolPrices, yahooFactor, nextChange, usdEurRate);
+          if (yn != null) nextSourcePrices['yahoo'] = yn;
         }
 
         // EIA
@@ -179,19 +185,10 @@ void callbackDispatcher() {
         if (eiaSymbol != null && eiaFactor != null) {
           final eiaPrices = await priceRepo.getOilPrices(eiaSymbol, days: 60);
           if (eiaPrices.isNotEmpty) {
-            final currentWindow = eiaPrices.where((p) => p.date.isBefore(currentPeriodStart)).toList();
-            if (currentWindow.length >= 10) {
-              final count = currentWindow.length < 14 ? currentWindow.length : 14;
-              final window = currentWindow.reversed.take(count).toList().reversed.toList();
-              final cifCurrent = window.map((p) => p.cifMed * eiaFactor).toList();
-              final ratesCurrent = List.filled(cifCurrent.length, currentRate);
-              currentSourcePrices['eia'] = engine.predictPrice(fuelType, cifCurrent, ratesCurrent);
-            }
-            final nextCount = eiaPrices.length < 14 ? eiaPrices.length : 14;
-            final nextWindow = eiaPrices.reversed.take(nextCount).toList().reversed.toList();
-            final cifNext = nextWindow.map((p) => p.cifMed * eiaFactor).toList();
-            final ratesNext = List.filled(cifNext.length, usdEurRate);
-            nextSourcePrices['eia'] = engine.predictPrice(fuelType, cifNext, ratesNext);
+            final ec = computeSource(eiaPrices, eiaFactor, currentPeriodStart, currentRate);
+            if (ec != null) currentSourcePrices['eia'] = ec;
+            final en = computeSource(eiaPrices, eiaFactor, nextChange, usdEurRate);
+            if (en != null) nextSourcePrices['eia'] = en;
           }
         }
 
@@ -201,19 +198,10 @@ void callbackDispatcher() {
         if (oilApiSymbol != null && oilApiFactor != null) {
           final oilApiPrices = await priceRepo.getOilPrices(oilApiSymbol, days: 60);
           if (oilApiPrices.isNotEmpty) {
-            final currentWindow = oilApiPrices.where((p) => p.date.isBefore(currentPeriodStart)).toList();
-            if (currentWindow.isNotEmpty) { // OilPriceAPI is sparse (1 point/2 days), low threshold
-              final count = currentWindow.length < 14 ? currentWindow.length : 14;
-              final window = currentWindow.reversed.take(count).toList().reversed.toList();
-              final cifCurrent = window.map((p) => p.cifMed * oilApiFactor).toList();
-              final ratesCurrent = List.filled(cifCurrent.length, currentRate);
-              currentSourcePrices['oilapi'] = engine.predictPrice(fuelType, cifCurrent, ratesCurrent);
-            }
-            final nextCount = oilApiPrices.length < 14 ? oilApiPrices.length : 14;
-            final nextWindow = oilApiPrices.reversed.take(nextCount).toList().reversed.toList();
-            final cifNext = nextWindow.map((p) => p.cifMed * oilApiFactor).toList();
-            final ratesNext = List.filled(cifNext.length, usdEurRate);
-            nextSourcePrices['oilapi'] = engine.predictPrice(fuelType, cifNext, ratesNext);
+            final oc = computeSource(oilApiPrices, oilApiFactor, currentPeriodStart, currentRate, minPoints: 1);
+            if (oc != null) currentSourcePrices['oilapi'] = oc;
+            final on_ = computeSource(oilApiPrices, oilApiFactor, nextChange, usdEurRate, minPoints: 1);
+            if (on_ != null) nextSourcePrices['oilapi'] = on_;
           }
         }
 
