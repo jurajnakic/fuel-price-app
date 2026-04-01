@@ -35,6 +35,7 @@ class SettingsRepository {
 
   Future<Map<String, dynamic>> getNotificationSettings() async {
     final rows = await db.query('notification_settings');
+    if (rows.isEmpty) return {'id': 1, 'enabled': 1, 'day': 'monday', 'hour': 9};
     return rows.first;
   }
 

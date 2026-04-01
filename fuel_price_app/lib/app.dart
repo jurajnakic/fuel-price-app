@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
@@ -263,52 +262,6 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     await _priceRepo.cleanOldData(const Duration(days: 730));
   }
 
-  /// Seed realistic demo data when API is unavailable (e.g., emulator)
-  Future<void> _seedDemoData() async {
-    final now = DateTime.now();
-    final random = Random();
-
-    // Seed 20 days of Brent prices around 72 USD/barrel
-    for (var i = 20; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
-      final price = 70.0 + random.nextDouble() * 5; // 70-75 USD
-      await _priceRepo.saveOilPrice(
-        OilPrice(date: date, cifMed: price, source: 'BZ=F'),
-      );
-    }
-
-    // Seed exchange rate (~0.92 EUR/USD)
-    await _priceRepo.saveExchangeRate(
-      ExchangeRate(date: now, usdEur: 0.92 + random.nextDouble() * 0.02),
-    );
-
-    // Seed some historical fuel prices
-    for (final ft in FuelType.values) {
-      final basePrice = switch (ft) {
-        FuelType.es95 => 1.45,
-        FuelType.es100 => 1.52,
-        FuelType.eurodizel => 1.40,
-        FuelType.unp10kg => 5.10,
-      };
-      // Current official price (last Tuesday)
-      final lastTuesday = now.subtract(Duration(days: (now.weekday - DateTime.tuesday) % 7));
-      await _priceRepo.saveFuelPrice(
-        FuelPrice(fuelType: ft, date: lastTuesday, price: basePrice, isPrediction: false),
-      );
-      // A few historical prices
-      for (var i = 1; i <= 4; i++) {
-        await _priceRepo.saveFuelPrice(
-          FuelPrice(
-            fuelType: ft,
-            date: lastTuesday.subtract(Duration(days: i * 14)),
-            price: basePrice + (random.nextDouble() - 0.5) * 0.1,
-            isPrediction: false,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _recalculatePredictions() async {
     final engine = FormulaEngine(_activeParams);
     final rates = await _priceRepo.getExchangeRates(days: 60);
@@ -352,13 +305,15 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
             ? await _priceRepo.getOilPrices(oilApiSymbol, days: 60)
             : <OilPrice>[];
 
-        // Helper to compute price from a source's prices
-        double? computePrice(List<OilPrice> prices, double factor, bool isCurrent) {
+        // Helper to compute price from a source's prices.
+        // [minPoints] is the minimum data points needed for current period
+        // (10 for daily sources like Yahoo/EIA, 1 for sparse sources like OilPriceAPI).
+        double? computePrice(List<OilPrice> prices, double factor, bool isCurrent, {int minPoints = 10}) {
           if (prices.isEmpty) return null;
           final window = isCurrent
               ? prices.where((p) => p.date.isBefore(currentPeriodStart)).toList()
               : prices;
-          if (window.length < (isCurrent ? 10 : 1)) return null;
+          if (window.length < (isCurrent ? minPoints : 1)) return null;
           final count = window.length < 14 ? window.length : 14;
           final slice = window.reversed.take(count).toList().reversed.toList();
           final cifMed = slice.map((p) => p.cifMed * factor).toList();
@@ -372,7 +327,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         if (yc != null) currentSourcePrices['yahoo'] = yc;
         final ec = eiaFactor != null ? computePrice(eiaPrices, eiaFactor, true) : null;
         if (ec != null) currentSourcePrices['eia'] = ec;
-        final oc = oilApiFactor != null ? computePrice(oilApiPrices, oilApiFactor, true) : null;
+        final oc = oilApiFactor != null ? computePrice(oilApiPrices, oilApiFactor, true, minPoints: 1) : null;
         if (oc != null) currentSourcePrices['oilapi'] = oc;
 
         final currentPrice = PriceBlender.blend(currentSourcePrices, weights);
@@ -390,7 +345,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         if (yn != null) nextSourcePrices['yahoo'] = yn;
         final en = eiaFactor != null ? computePrice(eiaPrices, eiaFactor, false) : null;
         if (en != null) nextSourcePrices['eia'] = en;
-        final on_ = oilApiFactor != null ? computePrice(oilApiPrices, oilApiFactor, false) : null;
+        final on_ = oilApiFactor != null ? computePrice(oilApiPrices, oilApiFactor, false, minPoints: 1) : null;
         if (on_ != null) nextSourcePrices['oilapi'] = on_;
 
         final predictedPrice = PriceBlender.blend(nextSourcePrices, weights);

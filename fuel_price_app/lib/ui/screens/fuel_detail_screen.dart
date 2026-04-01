@@ -443,6 +443,7 @@ class _PriceChart extends StatelessWidget {
               getTouchLineStart: (_, __) => double.infinity,
               getTouchLineEnd: (_, __) => 0,
               touchTooltipData: LineTouchTooltipData(
+                getTooltipColor: (_) => cs.primaryContainer,
                 tooltipBorder: BorderSide.none,
                 tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 tooltipRoundedRadius: 8,

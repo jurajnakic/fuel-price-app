@@ -87,8 +87,8 @@ class FuelParams {
       'eurodizel': 327.0,
       'unp_10kg': 16.0,
     },
-    this.eiaApiKey = 'REPLACE_WITH_REAL_KEY',
-    this.oilPriceApiKey = 'REPLACE_WITH_REAL_KEY',
+    this.eiaApiKey = 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
+    this.oilPriceApiKey = '3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce',
     this.eiaSymbols = const {
       'es95': 'EER_EPMRU_PF4_Y35NY_DPG',
       'es100': 'EER_EPMRU_PF4_Y35NY_DPG',
@@ -99,19 +99,19 @@ class FuelParams {
       'eurodizel': 'MGO_05S_NLRTM_USD',
     },
     this.eiaCifMedFactors = const {
-      'es95': 390.0,
-      'es100': 390.0,
-      'eurodizel': 320.0,
-      'unp_10kg': 280.0,
+      'es95': 293.0,
+      'es100': 293.0,
+      'eurodizel': 248.0,
+      'unp_10kg': 1578.0,
     },
     this.oilApiCifMedFactors = const {
       'eurodizel': 1.05,
     },
     this.sourceWeights = const {
-      'es95': {'yahoo': 0.5, 'eia': 0.5},
-      'es100': {'yahoo': 0.5, 'eia': 0.5},
-      'eurodizel': {'yahoo': 0.3, 'eia': 0.2, 'oilapi': 0.5},
-      'unp_10kg': {'yahoo': 0.5, 'eia': 0.5},
+      'es95': {'yahoo': 0.29, 'eia': 0.71},
+      'es100': {'yahoo': 0.29, 'eia': 0.71},
+      'eurodizel': {'yahoo': 0.1, 'eia': 0.6, 'oilapi': 0.3},
+      'unp_10kg': {'yahoo': 0.31, 'eia': 0.69},
     },
   });
 
@@ -166,10 +166,10 @@ class FuelParams {
             },
       eiaApiKey: json.containsKey('eia_api_key')
           ? json['eia_api_key'] as String
-          : 'REPLACE_WITH_REAL_KEY',
+          : 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
       oilPriceApiKey: json.containsKey('oil_price_api_key')
           ? json['oil_price_api_key'] as String
-          : 'REPLACE_WITH_REAL_KEY',
+          : '3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce',
       eiaSymbols: json.containsKey('eia_symbols')
           ? (json['eia_symbols'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, v as String))
@@ -189,10 +189,10 @@ class FuelParams {
           ? (json['eia_cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
           : const {
-              'es95': 390.0,
-              'es100': 390.0,
-              'eurodizel': 320.0,
-              'unp_10kg': 280.0,
+              'es95': 293.0,
+              'es100': 293.0,
+              'eurodizel': 248.0,
+              'unp_10kg': 1578.0,
             },
       oilApiCifMedFactors: json.containsKey('oil_api_cif_med_factors')
           ? (json['oil_api_cif_med_factors'] as Map<String, dynamic>)
@@ -210,10 +210,10 @@ class FuelParams {
               ),
             )
           : const {
-              'es95': {'yahoo': 0.5, 'eia': 0.5},
-              'es100': {'yahoo': 0.5, 'eia': 0.5},
-              'eurodizel': {'yahoo': 0.3, 'eia': 0.2, 'oilapi': 0.5},
-              'unp_10kg': {'yahoo': 0.5, 'eia': 0.5},
+              'es95': {'yahoo': 0.29, 'eia': 0.71},
+              'es100': {'yahoo': 0.29, 'eia': 0.71},
+              'eurodizel': {'yahoo': 0.1, 'eia': 0.6, 'oilapi': 0.3},
+              'unp_10kg': {'yahoo': 0.31, 'eia': 0.69},
             },
     );
   }

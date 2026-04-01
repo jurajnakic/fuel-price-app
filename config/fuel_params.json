@@ -45,5 +45,31 @@
     "es100": 402.4,
     "eurodizel": 327.0,
     "unp_10kg": 16.0
+  },
+  "eia_api_key": "TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h",
+  "oil_price_api_key": "3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce",
+  "eia_symbols": {
+    "es95": "EER_EPMRU_PF4_Y35NY_DPG",
+    "es100": "EER_EPMRU_PF4_Y35NY_DPG",
+    "eurodizel": "EER_EPD2DXL0_PF4_Y35NY_DPG",
+    "unp_10kg": "EER_EPLLPA_PF4_Y44MB_DPG"
+  },
+  "oil_api_symbols": {
+    "eurodizel": "MGO_05S_NLRTM_USD"
+  },
+  "eia_cif_med_factors": {
+    "es95": 293.0,
+    "es100": 293.0,
+    "eurodizel": 248.0,
+    "unp_10kg": 1578.0
+  },
+  "oil_api_cif_med_factors": {
+    "eurodizel": 1.05
+  },
+  "source_weights": {
+    "es95": {"yahoo": 0.29, "eia": 0.71},
+    "es100": {"yahoo": 0.29, "eia": 0.71},
+    "eurodizel": {"yahoo": 0.1, "eia": 0.6, "oilapi": 0.3},
+    "unp_10kg": {"yahoo": 0.31, "eia": 0.69}
   }
 }

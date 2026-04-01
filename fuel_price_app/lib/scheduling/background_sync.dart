@@ -118,8 +118,12 @@ void callbackDispatcher() {
         await prefs.setString('oilapi_last_fetch', today.toIso8601String());
       }
 
-      // 4. Fetch exchange rates from HNB
+      // 4. Fetch exchange rates from HNB (historical + latest)
       final hnb = HnbService();
+      final historicalRates = await hnb.fetchHistoricalRates(60);
+      for (final h in historicalRates) {
+        await priceRepo.saveExchangeRate(ExchangeRate(date: h.date, usdEur: h.rate));
+      }
       final usdEurRate = await hnb.fetchUsdEurRate();
       await priceRepo.saveExchangeRate(ExchangeRate(
         date: today,
@@ -198,7 +202,7 @@ void callbackDispatcher() {
           final oilApiPrices = await priceRepo.getOilPrices(oilApiSymbol, days: 60);
           if (oilApiPrices.isNotEmpty) {
             final currentWindow = oilApiPrices.where((p) => p.date.isBefore(currentPeriodStart)).toList();
-            if (currentWindow.length >= 10) {
+            if (currentWindow.isNotEmpty) { // OilPriceAPI is sparse (1 point/2 days), low threshold
               final count = currentWindow.length < 14 ? currentWindow.length : 14;
               final window = currentWindow.reversed.take(count).toList().reversed.toList();
               final cifCurrent = window.map((p) => p.cifMed * oilApiFactor).toList();
@@ -253,6 +257,7 @@ void callbackDispatcher() {
 
           for (final fuelType in FuelType.values) {
             if (notifFuels[fuelType.name] != true) continue;
+            if (!predictions.containsKey(fuelType)) continue;
 
             final currentPrice =
                 await priceRepo.getLatestPrice(fuelType, prediction: false);
