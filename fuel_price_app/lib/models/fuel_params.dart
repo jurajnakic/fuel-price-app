@@ -99,19 +99,19 @@ class FuelParams {
       'eurodizel': 'MGO_05S_NLRTM_USD',
     },
     this.eiaCifMedFactors = const {
-      'es95': 293.0,
-      'es100': 293.0,
-      'eurodizel': 248.0,
-      'unp_10kg': 1578.0,
+      'es95': 396.0,
+      'es100': 396.0,
+      'eurodizel': 333.0,
+      'unp_10kg': 2133.0,
     },
     this.oilApiCifMedFactors = const {
       'eurodizel': 1.05,
     },
     this.sourceWeights = const {
-      'es95': {'yahoo': 0.29, 'eia': 0.71},
-      'es100': {'yahoo': 0.29, 'eia': 0.71},
-      'eurodizel': {'yahoo': 0.1, 'eia': 0.6, 'oilapi': 0.3},
-      'unp_10kg': {'yahoo': 0.31, 'eia': 0.69},
+      'es95': {'yahoo': 0.80, 'eia': 0.20},
+      'es100': {'yahoo': 0.80, 'eia': 0.20},
+      'eurodizel': {'yahoo': 0.85, 'eia': 0.05, 'oilapi': 0.10},
+      'unp_10kg': {'yahoo': 0.70, 'eia': 0.30},
     },
   });
 
@@ -189,10 +189,10 @@ class FuelParams {
           ? (json['eia_cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
           : const {
-              'es95': 293.0,
-              'es100': 293.0,
-              'eurodizel': 248.0,
-              'unp_10kg': 1578.0,
+              'es95': 396.0,
+              'es100': 396.0,
+              'eurodizel': 333.0,
+              'unp_10kg': 2133.0,
             },
       oilApiCifMedFactors: json.containsKey('oil_api_cif_med_factors')
           ? (json['oil_api_cif_med_factors'] as Map<String, dynamic>)
@@ -210,10 +210,10 @@ class FuelParams {
               ),
             )
           : const {
-              'es95': {'yahoo': 0.29, 'eia': 0.71},
-              'es100': {'yahoo': 0.29, 'eia': 0.71},
-              'eurodizel': {'yahoo': 0.1, 'eia': 0.6, 'oilapi': 0.3},
-              'unp_10kg': {'yahoo': 0.31, 'eia': 0.69},
+              'es95': {'yahoo': 0.80, 'eia': 0.20},
+              'es100': {'yahoo': 0.80, 'eia': 0.20},
+              'eurodizel': {'yahoo': 0.85, 'eia': 0.05, 'oilapi': 0.10},
+              'unp_10kg': {'yahoo': 0.70, 'eia': 0.30},
             },
     );
   }

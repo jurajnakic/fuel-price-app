@@ -140,7 +140,7 @@ void main() {
       expect(params.eiaCifMedFactors, isNotEmpty);
       expect(params.oilApiCifMedFactors, isNotEmpty);
       expect(params.sourceWeights, isNotEmpty);
-      expect(params.sourceWeights['eurodizel']!['oilapi'], 0.3);
+      expect(params.sourceWeights['eurodizel']!['oilapi'], 0.10);
     });
 
     test('fromJson parses EIA/OilAPI fields from JSON', () {
@@ -168,7 +168,7 @@ void main() {
       final p = FuelParams.defaultParams;
       expect(p.eiaSymbols['eurodizel'], 'EER_EPD2DXL0_PF4_Y35NY_DPG');
       expect(p.oilApiSymbols['eurodizel'], 'MGO_05S_NLRTM_USD');
-      expect(p.sourceWeights['eurodizel']!['oilapi'], 0.3);
+      expect(p.sourceWeights['eurodizel']!['oilapi'], 0.10);
     });
   });
 }
