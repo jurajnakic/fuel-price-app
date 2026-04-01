@@ -37,11 +37,11 @@ class FuelParams {
   /// Gasoline → RBOB (RB=F), Diesel → Heating Oil (HO=F), LPG → Brent (BZ=F).
   final Map<String, String> yahooSymbols;
 
-  /// Conversion factors: raw Yahoo price → CIF Med USD/tonne.
-  /// RB=F (USD/gal): ×349.9 (gal→tonne) × ~1.15 (CIF Med premium) ≈ 402
-  /// HO=F (USD/gal): ×312.6 (gal→tonne) × ~1.20 (CIF Med premium) ≈ 375
-  /// BZ=F (USD/bbl): ×7.33 (bbl→tonne) × ~2.18 (LPG product/CIF Med factor) ≈ 16.0
+  /// Conversion: cifMed = raw × factor + offset (USD/tonne).
+  /// The offset captures fixed CIF Med costs (shipping, insurance, port fees)
+  /// that don't scale with the commodity price.
   final Map<String, double> cifMedFactors;
+  final Map<String, double> cifMedOffsets;
 
   /// EIA API key (hardcoded default, overridable via remote config)
   final String eiaApiKey;
@@ -55,8 +55,9 @@ class FuelParams {
   /// OilPriceAPI commodity code per fuel type
   final Map<String, String> oilApiSymbols;
 
-  /// CIF Med conversion factors for EIA spot prices
+  /// CIF Med conversion for EIA: cifMed = raw × factor + offset
   final Map<String, double> eiaCifMedFactors;
+  final Map<String, double> eiaCifMedOffsets;
 
   /// CIF Med conversion factors for OilPriceAPI prices
   final Map<String, double> oilApiCifMedFactors;
@@ -82,10 +83,16 @@ class FuelParams {
       'unp_10kg': 'BZ=F',
     },
     this.cifMedFactors = const {
-      'es95': 399.0,
-      'es100': 399.0,
-      'eurodizel': 338.0,
-      'unp_10kg': 16.4,
+      'es95': 369.0,
+      'es100': 369.0,
+      'eurodizel': 308.0,
+      'unp_10kg': 16.2,
+    },
+    this.cifMedOffsets = const {
+      'es95': 75.0,
+      'es100': 75.0,
+      'eurodizel': 105.0,
+      'unp_10kg': 12.5,
     },
     this.eiaApiKey = 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
     this.oilPriceApiKey = '3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce',
@@ -99,10 +106,16 @@ class FuelParams {
       'eurodizel': 'MGO_05S_NLRTM_USD',
     },
     this.eiaCifMedFactors = const {
-      'es95': 396.0,
-      'es100': 396.0,
-      'eurodizel': 333.0,
-      'unp_10kg': 2133.0,
+      'es95': 366.0,
+      'es100': 366.0,
+      'eurodizel': 303.0,
+      'unp_10kg': 2153.0,
+    },
+    this.eiaCifMedOffsets = const {
+      'es95': 70.0,
+      'es100': 70.0,
+      'eurodizel': 105.0,
+      'unp_10kg': -13.5,
     },
     this.oilApiCifMedFactors = const {
       'eurodizel': 1.05,
@@ -111,7 +124,7 @@ class FuelParams {
       'es95': {'yahoo': 0.80, 'eia': 0.20},
       'es100': {'yahoo': 0.80, 'eia': 0.20},
       'eurodizel': {'yahoo': 0.85, 'eia': 0.05, 'oilapi': 0.10},
-      'unp_10kg': {'yahoo': 0.50, 'eia': 0.50},
+      'unp_10kg': {'yahoo': 0.30, 'eia': 0.70},
     },
   });
 
@@ -159,10 +172,19 @@ class FuelParams {
           ? (json['cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
           : const {
-              'es95': 399.0,
-              'es100': 399.0,
-              'eurodizel': 338.0,
-              'unp_10kg': 16.4,
+              'es95': 369.0,
+              'es100': 369.0,
+              'eurodizel': 308.0,
+              'unp_10kg': 16.2,
+            },
+      cifMedOffsets: json.containsKey('cif_med_offsets')
+          ? (json['cif_med_offsets'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, (v as num).toDouble()))
+          : const {
+              'es95': 75.0,
+              'es100': 75.0,
+              'eurodizel': 105.0,
+              'unp_10kg': 12.5,
             },
       eiaApiKey: json.containsKey('eia_api_key')
           ? json['eia_api_key'] as String
@@ -189,10 +211,19 @@ class FuelParams {
           ? (json['eia_cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
           : const {
-              'es95': 396.0,
-              'es100': 396.0,
-              'eurodizel': 333.0,
-              'unp_10kg': 2133.0,
+              'es95': 366.0,
+              'es100': 366.0,
+              'eurodizel': 303.0,
+              'unp_10kg': 2153.0,
+            },
+      eiaCifMedOffsets: json.containsKey('eia_cif_med_offsets')
+          ? (json['eia_cif_med_offsets'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, (v as num).toDouble()))
+          : const {
+              'es95': 70.0,
+              'es100': 70.0,
+              'eurodizel': 105.0,
+              'unp_10kg': -13.5,
             },
       oilApiCifMedFactors: json.containsKey('oil_api_cif_med_factors')
           ? (json['oil_api_cif_med_factors'] as Map<String, dynamic>)
@@ -213,7 +244,7 @@ class FuelParams {
               'es95': {'yahoo': 0.80, 'eia': 0.20},
               'es100': {'yahoo': 0.80, 'eia': 0.20},
               'eurodizel': {'yahoo': 0.85, 'eia': 0.05, 'oilapi': 0.10},
-              'unp_10kg': {'yahoo': 0.50, 'eia': 0.50},
+              'unp_10kg': {'yahoo': 0.30, 'eia': 0.70},
             },
     );
   }

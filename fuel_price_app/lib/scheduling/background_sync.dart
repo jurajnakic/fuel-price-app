@@ -159,35 +159,38 @@ void callbackDispatcher() {
         final nextSourcePrices = <String, double>{};
 
         // Helper: compute price for a source in a given window
-        double? computeSource(List<OilPrice> prices, double factor, DateTime windowEnd, double rate, {int minPoints = 5}) {
+        // cifMed = raw × factor + offset
+        double? computeSource(List<OilPrice> prices, double factor, double offset, DateTime windowEnd, double rate, {int minPoints = 5}) {
           final window = windowFilter(prices, windowEnd);
           if (window.length < minPoints) return null;
-          final cif = window.map((p) => p.cifMed * factor).toList();
+          final cif = window.map((p) => p.cifMed * factor + offset).toList();
           final rates = List.filled(cif.length, rate);
           return engine.predictPrice(fuelType, cif, rates);
         }
 
         // Yahoo
         final yahooSymbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
-        final yahooFactor = params.cifMedFactors[fuelType.paramKey] ?? 399.0;
+        final yahooFactor = params.cifMedFactors[fuelType.paramKey] ?? 369.0;
+        final yahooOffset = params.cifMedOffsets[fuelType.paramKey] ?? 0.0;
         final symbolPrices = await priceRepo.getOilPrices(yahooSymbol, days: 60);
 
         if (symbolPrices.isNotEmpty) {
-          final yc = computeSource(symbolPrices, yahooFactor, currentPeriodStart, currentRate);
+          final yc = computeSource(symbolPrices, yahooFactor, yahooOffset, currentPeriodStart, currentRate);
           if (yc != null) currentSourcePrices['yahoo'] = yc;
-          final yn = computeSource(symbolPrices, yahooFactor, nextChange, usdEurRate);
+          final yn = computeSource(symbolPrices, yahooFactor, yahooOffset, nextChange, usdEurRate);
           if (yn != null) nextSourcePrices['yahoo'] = yn;
         }
 
         // EIA
         final eiaSymbol = params.eiaSymbols[fuelType.paramKey];
         final eiaFactor = params.eiaCifMedFactors[fuelType.paramKey];
+        final eiaOffset = params.eiaCifMedOffsets[fuelType.paramKey] ?? 0.0;
         if (eiaSymbol != null && eiaFactor != null) {
           final eiaPrices = await priceRepo.getOilPrices(eiaSymbol, days: 60);
           if (eiaPrices.isNotEmpty) {
-            final ec = computeSource(eiaPrices, eiaFactor, currentPeriodStart, currentRate);
+            final ec = computeSource(eiaPrices, eiaFactor, eiaOffset, currentPeriodStart, currentRate);
             if (ec != null) currentSourcePrices['eia'] = ec;
-            final en = computeSource(eiaPrices, eiaFactor, nextChange, usdEurRate);
+            final en = computeSource(eiaPrices, eiaFactor, eiaOffset, nextChange, usdEurRate);
             if (en != null) nextSourcePrices['eia'] = en;
           }
         }
@@ -198,9 +201,9 @@ void callbackDispatcher() {
         if (oilApiSymbol != null && oilApiFactor != null) {
           final oilApiPrices = await priceRepo.getOilPrices(oilApiSymbol, days: 60);
           if (oilApiPrices.isNotEmpty) {
-            final oc = computeSource(oilApiPrices, oilApiFactor, currentPeriodStart, currentRate, minPoints: 1);
+            final oc = computeSource(oilApiPrices, oilApiFactor, 0.0, currentPeriodStart, currentRate, minPoints: 1);
             if (oc != null) currentSourcePrices['oilapi'] = oc;
-            final on_ = computeSource(oilApiPrices, oilApiFactor, nextChange, usdEurRate, minPoints: 1);
+            final on_ = computeSource(oilApiPrices, oilApiFactor, 0.0, nextChange, usdEurRate, minPoints: 1);
             if (on_ != null) nextSourcePrices['oilapi'] = on_;
           }
         }

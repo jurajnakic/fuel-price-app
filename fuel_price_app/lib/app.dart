@@ -288,12 +288,14 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         // Collect predictions from each source
         // Yahoo
         final yahooSymbol = _activeParams.yahooSymbols[ft.paramKey] ?? 'BZ=F';
-        final yahooFactor = _activeParams.cifMedFactors[ft.paramKey] ?? 399.0;
+        final yahooFactor = _activeParams.cifMedFactors[ft.paramKey] ?? 369.0;
+        final yahooOffset = _activeParams.cifMedOffsets[ft.paramKey] ?? 0.0;
         final yahooPrices = await _priceRepo.getOilPrices(yahooSymbol, days: 60);
 
         // EIA
         final eiaSymbol = _activeParams.eiaSymbols[ft.paramKey];
         final eiaFactor = _activeParams.eiaCifMedFactors[ft.paramKey];
+        final eiaOffset = _activeParams.eiaCifMedOffsets[ft.paramKey] ?? 0.0;
         final eiaPrices = eiaSymbol != null
             ? await _priceRepo.getOilPrices(eiaSymbol, days: 60)
             : <OilPrice>[];
@@ -307,9 +309,10 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
 
         // Helper to compute price from a source's prices.
         // Uses a 14-calendar-day observation window per NN 31/2025.
+        // cifMed = raw × factor + offset (offset captures fixed CIF Med costs).
         // [minPoints] is the minimum data points needed
         // (5 for daily sources like Yahoo/EIA, 1 for sparse sources like OilPriceAPI).
-        double? computePrice(List<OilPrice> prices, double factor, bool isCurrent, {int minPoints = 5}) {
+        double? computePrice(List<OilPrice> prices, double factor, double offset, bool isCurrent, {int minPoints = 5}) {
           if (prices.isEmpty) return null;
           // Observation window: 14 calendar days (= one price cycle)
           final windowEnd = isCurrent ? currentPeriodStart : nextChange;
@@ -318,18 +321,18 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
               .where((p) => !p.date.isBefore(windowStart) && p.date.isBefore(windowEnd))
               .toList();
           if (window.length < minPoints) return null;
-          final cifMed = window.map((p) => p.cifMed * factor).toList();
+          final cifMed = window.map((p) => p.cifMed * factor + offset).toList();
           final ratesList = window.map((p) => _findRate(rates, p.date)).toList();
           return engine.predictPrice(ft, cifMed, ratesList);
         }
 
         // --- Current period price ---
         final currentSourcePrices = <String, double>{};
-        final yc = computePrice(yahooPrices, yahooFactor, true);
+        final yc = computePrice(yahooPrices, yahooFactor, yahooOffset, true);
         if (yc != null) currentSourcePrices['yahoo'] = yc;
-        final ec = eiaFactor != null ? computePrice(eiaPrices, eiaFactor, true) : null;
+        final ec = eiaFactor != null ? computePrice(eiaPrices, eiaFactor, eiaOffset, true) : null;
         if (ec != null) currentSourcePrices['eia'] = ec;
-        final oc = oilApiFactor != null ? computePrice(oilApiPrices, oilApiFactor, true, minPoints: 1) : null;
+        final oc = oilApiFactor != null ? computePrice(oilApiPrices, oilApiFactor!, 0.0, true, minPoints: 1) : null;
         if (oc != null) currentSourcePrices['oilapi'] = oc;
 
         final currentPrice = PriceBlender.blend(currentSourcePrices, weights);
@@ -343,11 +346,11 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
 
         // --- Next period prediction ---
         final nextSourcePrices = <String, double>{};
-        final yn = computePrice(yahooPrices, yahooFactor, false);
+        final yn = computePrice(yahooPrices, yahooFactor, yahooOffset, false);
         if (yn != null) nextSourcePrices['yahoo'] = yn;
-        final en = eiaFactor != null ? computePrice(eiaPrices, eiaFactor, false) : null;
+        final en = eiaFactor != null ? computePrice(eiaPrices, eiaFactor, eiaOffset, false) : null;
         if (en != null) nextSourcePrices['eia'] = en;
-        final on_ = oilApiFactor != null ? computePrice(oilApiPrices, oilApiFactor, false, minPoints: 1) : null;
+        final on_ = oilApiFactor != null ? computePrice(oilApiPrices, oilApiFactor!, 0.0, false, minPoints: 1) : null;
         if (on_ != null) nextSourcePrices['oilapi'] = on_;
 
         final predictedPrice = PriceBlender.blend(nextSourcePrices, weights);
