@@ -136,11 +136,11 @@ void main() {
       expect(params.oilPriceApiKey, isNotEmpty);
       expect(params.eiaSymbols, isNotEmpty);
       expect(params.eiaSymbols['es95'], 'EER_EPMRU_PF4_Y35NY_DPG');
-      expect(params.oilApiSymbols['eurodizel'], 'MGO_05S_NLRTM_USD');
+      expect(params.oilApiSymbols['eurodizel'], 'GASOIL_USD');
       expect(params.eiaCifMedFactors, isNotEmpty);
       expect(params.oilApiCifMedFactors, isNotEmpty);
       expect(params.sourceWeights, isNotEmpty);
-      expect(params.sourceWeights['eurodizel']!['yahoo'], 1.0);
+      expect(params.sourceWeights['eurodizel']!['oilapi'], 1.0);
     });
 
     test('fromJson parses EIA/OilAPI fields from JSON', () {
@@ -167,8 +167,21 @@ void main() {
     test('defaultParams has multi-source defaults', () {
       final p = FuelParams.defaultParams;
       expect(p.eiaSymbols['eurodizel'], 'EER_EPD2DXL0_PF4_Y35NY_DPG');
-      expect(p.oilApiSymbols['eurodizel'], 'MGO_05S_NLRTM_USD');
-      expect(p.sourceWeights['eurodizel']!['yahoo'], 1.0);
+      expect(p.oilApiSymbols['eurodizel'], 'GASOIL_USD');
+      expect(p.sourceWeights['eurodizel']!['oilapi'], 1.0);
+      expect(p.sourceWeights['eurodizel']!['yahoo'], 0.0);
+    });
+
+    test('defaultParams has ES95 offset 261', () {
+      final p = FuelParams.defaultParams;
+      expect(p.cifMedOffsets['es95'], 261.0);
+      expect(p.cifMedOffsets['es100'], 261.0);
+    });
+
+    test('defaultParams has eurodizel BZ=F fallback factor 11.23', () {
+      final p = FuelParams.defaultParams;
+      expect(p.cifMedFactors['eurodizel'], 11.23);
+      expect(p.cifMedOffsets['eurodizel'], 205.0);
     });
 
     test('defaultParams has oilApiCifMedOffsets', () {
