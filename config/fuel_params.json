@@ -1,5 +1,5 @@
 {
-  "version": "2025-02-26",
+  "version": "2026-04-07",
   "price_cycle": {
     "reference_date": "2026-03-24",
     "cycle_days": 14
@@ -43,13 +43,13 @@
   "cif_med_factors": {
     "es95": 300.0,
     "es100": 300.0,
-    "eurodizel": 6.04,
+    "eurodizel": 11.23,
     "unp_10kg": 16.2
   },
   "cif_med_offsets": {
-    "es95": 259.0,
-    "es100": 259.0,
-    "eurodizel": 648.0,
+    "es95": 261.0,
+    "es100": 261.0,
+    "eurodizel": 205.0,
     "unp_10kg": 12.5
   },
   "eia_api_key": "TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h",
@@ -61,7 +61,7 @@
     "unp_10kg": "EER_EPLLPA_PF4_Y44MB_DPG"
   },
   "oil_api_symbols": {
-    "eurodizel": "MGO_05S_NLRTM_USD"
+    "eurodizel": "GASOIL_USD"
   },
   "eia_cif_med_factors": {
     "es95": 366.0,
@@ -76,12 +76,15 @@
     "unp_10kg": -13.5
   },
   "oil_api_cif_med_factors": {
-    "eurodizel": 1.05
+    "eurodizel": 1.0
+  },
+  "oil_api_cif_med_offsets": {
+    "eurodizel": 40.0
   },
   "source_weights": {
     "es95": {"yahoo": 1.0},
     "es100": {"yahoo": 1.0},
-    "eurodizel": {"yahoo": 1.0},
+    "eurodizel": {"oilapi": 1.0, "yahoo": 0.0},
     "unp_10kg": {"eia": 1.0}
   }
 }
