@@ -50,5 +50,14 @@ void main() {
       final result = PriceBlender.blend(prices, weights);
       expect(result, 1.80);
     });
+
+    test('falls back to equal weights when primary source missing (ramp-up)', () {
+      // Eurodizel scenario: oilapi=1.0, yahoo=0.0 but oilapi has no data
+      final weights = {'oilapi': 1.0, 'yahoo': 0.0};
+      final prices = {'yahoo': 1.89}; // only yahoo available
+      final result = PriceBlender.blend(prices, weights);
+      // yahoo has weight 0 → excluded from available → equal-weight fallback
+      expect(result, 1.89);
+    });
   });
 }

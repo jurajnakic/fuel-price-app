@@ -39,7 +39,7 @@ class EiaService {
           '?api_key=$apiKey'
           '&frequency=daily'
           '&data[0]=value'
-          '&facets[series][]=$seriesId'
+          '&facets[series][]=${Uri.encodeComponent(seriesId)}'
           '&start=$startStr'
           '&sort[0][column]=period'
           '&sort[0][direction]=asc'
