@@ -34,19 +34,20 @@ class EiaService {
       final start = DateTime.now().subtract(Duration(days: days + 7));
       final startStr = '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
 
+      // Build URL manually — Dio mangles bracket parameters like data[] and facets[series][]
+      final url = '$_baseUrl'
+          '?api_key=$apiKey'
+          '&frequency=daily'
+          '&data[0]=value'
+          '&facets[series][]=$seriesId'
+          '&start=$startStr'
+          '&sort[0][column]=period'
+          '&sort[0][direction]=asc'
+          '&length=5000';
+
       _log('fetching $seriesId from $startStr');
       final response = await dio.get(
-        _baseUrl,
-        queryParameters: {
-          'api_key': apiKey,
-          'frequency': 'daily',
-          'data[]': 'value',
-          'facets[series][]': seriesId,
-          'start': startStr,
-          'sort[0][column]': 'period',
-          'sort[0][direction]': 'asc',
-          'length': '5000',
-        },
+        url,
         options: Options(
           responseType: ResponseType.json,
           receiveTimeout: const Duration(seconds: 15),

@@ -42,7 +42,6 @@ void main() {
 
     when(() => mockDio.get(
       any(),
-      queryParameters: any(named: 'queryParameters'),
       options: any(named: 'options'),
     )).thenAnswer((_) async => Response(
       data: jsonData,
@@ -60,7 +59,6 @@ void main() {
   test('returns empty list on API error', () async {
     when(() => mockDio.get(
       any(),
-      queryParameters: any(named: 'queryParameters'),
       options: any(named: 'options'),
     )).thenThrow(DioException(
       requestOptions: RequestOptions(path: ''),
@@ -85,7 +83,6 @@ void main() {
 
     when(() => mockDio.get(
       any(),
-      queryParameters: any(named: 'queryParameters'),
       options: any(named: 'options'),
     )).thenAnswer((_) async => Response(
       data: jsonData,
@@ -97,5 +94,36 @@ void main() {
     expect(prices.length, 2);
     expect(prices.first.value, 2.45);
     expect(prices.last.value, 2.40);
+  });
+
+  test('builds correct v2 URL with bracket parameters', () async {
+    final jsonData = {
+      'response': {
+        'data': [
+          {'period': '2026-03-20', 'value': '2.45'},
+        ],
+      },
+    };
+
+    String? capturedUrl;
+    when(() => mockDio.get(
+      any(),
+      options: any(named: 'options'),
+    )).thenAnswer((invocation) async {
+      capturedUrl = invocation.positionalArguments[0] as String;
+      return Response(
+        data: jsonData,
+        statusCode: 200,
+        requestOptions: RequestOptions(path: ''),
+      );
+    });
+
+    await service.fetchSpotPrices('EER_EPLLPA_PF4_Y44MB_DPG', days: 30);
+
+    expect(capturedUrl, isNotNull);
+    expect(capturedUrl, contains('data[0]=value'));
+    expect(capturedUrl, contains('facets[series][]=EER_EPLLPA_PF4_Y44MB_DPG'));
+    expect(capturedUrl, contains('api_key=test-key'));
+    expect(capturedUrl, contains('frequency=daily'));
   });
 }
