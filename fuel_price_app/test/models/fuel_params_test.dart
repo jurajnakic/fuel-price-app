@@ -170,5 +170,22 @@ void main() {
       expect(p.oilApiSymbols['eurodizel'], 'MGO_05S_NLRTM_USD');
       expect(p.sourceWeights['eurodizel']!['yahoo'], 1.0);
     });
+
+    test('defaultParams has oilApiCifMedOffsets', () {
+      final p = FuelParams.defaultParams;
+      expect(p.oilApiCifMedOffsets['eurodizel'], 40.0);
+    });
+
+    test('fromJson parses oil_api_cif_med_offsets', () {
+      final json = _baseJson()
+        ..['oil_api_cif_med_offsets'] = {'eurodizel': 55.0};
+      final params = FuelParams.fromJson(json);
+      expect(params.oilApiCifMedOffsets['eurodizel'], 55.0);
+    });
+
+    test('fromJson uses default oilApiCifMedOffsets when missing', () {
+      final params = FuelParams.fromJson(_baseJson());
+      expect(params.oilApiCifMedOffsets['eurodizel'], 40.0);
+    });
   });
 }

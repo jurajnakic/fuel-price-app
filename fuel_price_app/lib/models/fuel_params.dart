@@ -62,6 +62,9 @@ class FuelParams {
   /// CIF Med conversion factors for OilPriceAPI prices
   final Map<String, double> oilApiCifMedFactors;
 
+  /// CIF Med conversion offsets for OilPriceAPI prices
+  final Map<String, double> oilApiCifMedOffsets;
+
   /// Source weights per fuel type: maps source name → weight
   /// Sources: "yahoo", "eia", "oilapi". Normalized at runtime.
   final Map<String, Map<String, double>> sourceWeights;
@@ -119,6 +122,9 @@ class FuelParams {
     },
     this.oilApiCifMedFactors = const {
       'eurodizel': 1.05,
+    },
+    this.oilApiCifMedOffsets = const {
+      'eurodizel': 40.0,
     },
     this.sourceWeights = const {
       'es95': {'yahoo': 1.0},
@@ -231,6 +237,12 @@ class FuelParams {
           : const {
               'eurodizel': 1.05,
             },
+      oilApiCifMedOffsets: json.containsKey('oil_api_cif_med_offsets')
+          ? (json['oil_api_cif_med_offsets'] as Map<String, dynamic>)
+              .map((k, v) => MapEntry(k, (v as num).toDouble()))
+          : const {
+              'eurodizel': 40.0,
+            },
       sourceWeights: json.containsKey('source_weights')
           ? (json['source_weights'] as Map<String, dynamic>).map(
               (k, v) => MapEntry(
@@ -269,5 +281,6 @@ class FuelParams {
     vatRate: 0.25,
     referenceDate: '2026-03-24',
     cycleDays: 14,
+    oilApiCifMedOffsets: {'eurodizel': 40.0},
   );
 }
