@@ -1,5 +1,4 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'package:fuel_price_app/data/database.dart';
@@ -97,25 +96,17 @@ void callbackDispatcher() {
         }
       }
 
-      // 3c. Fetch OilPriceAPI prices (rate-limited: every 2 days)
-      final prefs = await SharedPreferences.getInstance();
-      final lastOilApiFetch = prefs.getString('oilapi_last_fetch');
-      final shouldFetchOilApi = lastOilApiFetch == null ||
-          today.difference(DateTime.tryParse(lastOilApiFetch) ?? today).inHours >= 48;
-
-      if (shouldFetchOilApi) {
-        final oilApi = OilPriceApiService(apiKey: params.oilPriceApiKey);
-        for (final code in params.oilApiSymbols.values.toSet()) {
-          try {
-            final price = await oilApi.fetchLatestPrice(code);
-            if (price != null) {
-              await priceRepo.saveOilPrice(OilPrice(
-                date: price.date, cifMed: price.value, source: code,
-              ));
-            }
-          } catch (_) {}
-        }
-        await prefs.setString('oilapi_last_fetch', today.toIso8601String());
+      // 3c. Fetch OilPriceAPI prices (daily — free tier allows ~50 req/month)
+      final oilApi = OilPriceApiService(apiKey: params.oilPriceApiKey);
+      for (final code in params.oilApiSymbols.values.toSet()) {
+        try {
+          final price = await oilApi.fetchLatestPrice(code);
+          if (price != null) {
+            await priceRepo.saveOilPrice(OilPrice(
+              date: price.date, cifMed: price.value, source: code,
+            ));
+          }
+        } catch (_) {}
       }
 
       // 4. Fetch exchange rates from HNB (historical + latest)
@@ -198,12 +189,13 @@ void callbackDispatcher() {
         // OilPriceAPI
         final oilApiSymbol = params.oilApiSymbols[fuelType.paramKey];
         final oilApiFactor = params.oilApiCifMedFactors[fuelType.paramKey];
+        final oilApiOffset = params.oilApiCifMedOffsets[fuelType.paramKey] ?? 0.0;
         if (oilApiSymbol != null && oilApiFactor != null) {
           final oilApiPrices = await priceRepo.getOilPrices(oilApiSymbol, days: 60);
           if (oilApiPrices.isNotEmpty) {
-            final oc = computeSource(oilApiPrices, oilApiFactor, 0.0, currentPeriodStart, currentRate, minPoints: 1);
+            final oc = computeSource(oilApiPrices, oilApiFactor, oilApiOffset, currentPeriodStart, currentRate, minPoints: 1);
             if (oc != null) currentSourcePrices['oilapi'] = oc;
-            final on_ = computeSource(oilApiPrices, oilApiFactor, 0.0, nextChange, usdEurRate, minPoints: 1);
+            final on_ = computeSource(oilApiPrices, oilApiFactor, oilApiOffset, nextChange, usdEurRate, minPoints: 1);
             if (on_ != null) nextSourcePrices['oilapi'] = on_;
           }
         }
