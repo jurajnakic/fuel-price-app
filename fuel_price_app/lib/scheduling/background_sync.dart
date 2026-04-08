@@ -168,7 +168,7 @@ void callbackDispatcher() {
         if (symbolPrices.isNotEmpty) {
           final yc = computeSource(symbolPrices, yahooFactor, yahooOffset, currentPeriodStart, currentRate);
           if (yc != null) currentSourcePrices['yahoo'] = yc;
-          final yn = computeSource(symbolPrices, yahooFactor, yahooOffset, nextChange, usdEurRate);
+          final yn = computeSource(symbolPrices, yahooFactor, yahooOffset, nextChange, usdEurRate, minPoints: 1);
           if (yn != null) nextSourcePrices['yahoo'] = yn;
         }
 
@@ -181,7 +181,7 @@ void callbackDispatcher() {
           if (eiaPrices.isNotEmpty) {
             final ec = computeSource(eiaPrices, eiaFactor, eiaOffset, currentPeriodStart, currentRate);
             if (ec != null) currentSourcePrices['eia'] = ec;
-            final en = computeSource(eiaPrices, eiaFactor, eiaOffset, nextChange, usdEurRate);
+            final en = computeSource(eiaPrices, eiaFactor, eiaOffset, nextChange, usdEurRate, minPoints: 1);
             if (en != null) nextSourcePrices['eia'] = en;
           }
         }

@@ -79,37 +79,100 @@ class PriceRepository {
     return rows.map(FuelPrice.fromMap).toList();
   }
 
-  /// Calculate historical fuel prices from commodity prices + exchange rates using the formula.
-  /// Uses the correct Yahoo symbol per fuel type (RB=F for gasoline, HO=F for diesel, BZ=F for LPG).
+  /// Calculate historical fuel prices from commodity prices + exchange rates.
+  /// For each day in the output range, applies the NN 31/2025 formula using a
+  /// 14-calendar-day observation window ending on that day.
+  /// Uses the primary data source per fuel type based on sourceWeights.
   Future<List<FuelPrice>> getCalculatedHistory(
     FuelType fuelType, {
     required int days,
     required FuelParams params,
     int windowSize = 14,
   }) async {
-    final symbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
-    final factor = params.cifMedFactors[fuelType.paramKey] ?? 399.0;
+    // Determine primary source from sourceWeights
+    final weights = params.sourceWeights[fuelType.paramKey] ?? {'yahoo': 1.0};
+    String primarySource = 'yahoo';
+    double maxWeight = 0;
+    for (final entry in weights.entries) {
+      if (entry.value > maxWeight) {
+        maxWeight = entry.value;
+        primarySource = entry.key;
+      }
+    }
 
-    final oilPrices = await getOilPrices(symbol, days: days + windowSize);
-    final rates = await getExchangeRates(days: days + windowSize);
-    if (oilPrices.length < windowSize || rates.isEmpty) return [];
+    // Resolve symbol, factor, offset for the primary source
+    late final String symbol;
+    late final double factor;
+    late final double offset;
+
+    switch (primarySource) {
+      case 'eia':
+        symbol = params.eiaSymbols[fuelType.paramKey] ?? '';
+        factor = params.eiaCifMedFactors[fuelType.paramKey] ?? 1.0;
+        offset = params.eiaCifMedOffsets[fuelType.paramKey] ?? 0.0;
+      case 'oilapi':
+        symbol = params.oilApiSymbols[fuelType.paramKey] ?? '';
+        factor = params.oilApiCifMedFactors[fuelType.paramKey] ?? 1.0;
+        offset = params.oilApiCifMedOffsets[fuelType.paramKey] ?? 0.0;
+      default: // yahoo
+        symbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
+        factor = params.cifMedFactors[fuelType.paramKey] ?? 399.0;
+        offset = params.cifMedOffsets[fuelType.paramKey] ?? 0.0;
+    }
+
+    if (symbol.isEmpty) return [];
+
+    // Fetch extra data for the lookback window
+    final oilPrices = await getOilPrices(symbol, days: days + windowSize + 7);
+    final rates = await getExchangeRates(days: days + windowSize + 7);
+    if (oilPrices.isEmpty || rates.isEmpty) return [];
+
+    // Build date → rate lookup for per-date exchange rates
+    final rateByDate = <String, double>{};
+    for (final r in rates) {
+      rateByDate[r.date.toIso8601String().substring(0, 10)] = r.usdEur;
+    }
+    final fallbackRate = rates.last.usdEur;
+
+    // Find nearest rate on or before a given date
+    double findRate(DateTime date) {
+      // Try exact date first
+      final key = date.toIso8601String().substring(0, 10);
+      if (rateByDate.containsKey(key)) return rateByDate[key]!;
+      // Walk backwards up to 5 days (weekends/holidays)
+      for (var d = 1; d <= 5; d++) {
+        final prev = date.subtract(Duration(days: d)).toIso8601String().substring(0, 10);
+        if (rateByDate.containsKey(prev)) return rateByDate[prev]!;
+      }
+      return fallbackRate;
+    }
 
     final engine = FormulaEngine(params);
-    final lastRate = rates.last.usdEur;
     final result = <FuelPrice>[];
+    final now = DateTime.now();
+    final startDate = now.subtract(Duration(days: days));
 
-    // Calculate a price for every data point (sliding window)
-    for (var i = windowSize; i <= oilPrices.length; i++) {
-      final window = oilPrices.sublist(i - windowSize, i);
-      // Convert raw Yahoo price → CIF Med USD/tonne
-      final cifValues = window.map((p) => p.cifMed * factor).toList();
-      final rateValues = List.generate(cifValues.length, (_) => lastRate);
+    // For each day in the display range, compute: "what would the retail price
+    // be if the price cycle ended on this day?" using a 14-calendar-day window.
+    for (var d = 0; d <= days; d++) {
+      final windowEnd = startDate.add(Duration(days: d + 1)); // exclusive end
+      final windowStart = windowEnd.subtract(Duration(days: windowSize));
+
+      // Gather all data points within the calendar window
+      final window = oilPrices
+          .where((p) => !p.date.isBefore(windowStart) && p.date.isBefore(windowEnd))
+          .toList();
+
+      if (window.isEmpty) continue;
+
+      final cifValues = window.map((p) => p.cifMed * factor + offset).toList();
+      final rateValues = window.map((p) => findRate(p.date)).toList();
 
       try {
         final price = engine.predictPrice(fuelType, cifValues, rateValues);
         result.add(FuelPrice(
           fuelType: fuelType,
-          date: window.last.date,
+          date: windowEnd.subtract(const Duration(days: 1)),
           price: price,
           isPrediction: false,
         ));

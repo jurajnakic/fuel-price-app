@@ -9,7 +9,7 @@ class NotificationService {
       : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
     const initSettings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(initSettings);
   }
@@ -49,6 +49,7 @@ class NotificationService {
           channelDescription: 'Obavijesti o promjenama cijena goriva',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
+          icon: '@drawable/ic_notification',
         ),
       ),
     );

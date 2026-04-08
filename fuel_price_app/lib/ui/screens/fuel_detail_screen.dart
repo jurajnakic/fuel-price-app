@@ -100,7 +100,10 @@ class _DetailBody extends StatelessWidget {
                         ),
                       ),
                     )
-                  : _PriceChart(prices: state.priceHistory),
+                  : _PriceChart(
+                      prices: state.priceHistory,
+                      predictedPrice: state.predictedPrice,
+                    ),
             ),
           ),
 
@@ -339,8 +342,9 @@ class _PeriodSelector extends StatelessWidget {
 
 class _PriceChart extends StatelessWidget {
   final List<FuelPrice> prices;
+  final double? predictedPrice;
 
-  const _PriceChart({required this.prices});
+  const _PriceChart({required this.prices, this.predictedPrice});
 
   @override
   Widget build(BuildContext context) {
@@ -359,9 +363,38 @@ class _PriceChart extends StatelessWidget {
       return FlSpot(e.key.toDouble(), e.value.roundedPrice);
     }).toList();
 
-    final minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b) - 0.05;
-    final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) + 0.05;
+    var minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b) - 0.05;
+    var maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) + 0.05;
+
+    // Include predicted price in Y range so the line is always visible
+    if (predictedPrice != null) {
+      if (predictedPrice! - 0.02 < minY) minY = predictedPrice! - 0.05;
+      if (predictedPrice! + 0.02 > maxY) maxY = predictedPrice! + 0.05;
+    }
+
     final interval = _calculateInterval(maxY - minY);
+
+    // Prediction overlay: dashed horizontal line + label
+    final extraLines = <HorizontalLine>[];
+    if (predictedPrice != null) {
+      extraLines.add(HorizontalLine(
+        y: predictedPrice!,
+        color: cs.tertiary.withValues(alpha: 0.7),
+        strokeWidth: 1.5,
+        dashArray: [6, 4],
+        label: HorizontalLineLabel(
+          show: true,
+          alignment: Alignment.topRight,
+          padding: const EdgeInsets.only(right: 4, bottom: 2),
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            color: cs.tertiary,
+          ),
+          labelResolver: (_) => 'Predviđeno ${predictedPrice!.toStringAsFixed(2)} €',
+        ),
+      ));
+    }
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -373,6 +406,7 @@ class _PriceChart extends StatelessWidget {
           duration: Duration.zero,
           LineChartData(
             clipData: const FlClipData.all(),
+            extraLinesData: ExtraLinesData(horizontalLines: extraLines),
             gridData: FlGridData(
               show: true,
               drawVerticalLine: false,
