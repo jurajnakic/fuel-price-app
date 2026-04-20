@@ -39,13 +39,28 @@ void main() {
       expect(pc, closeTo(1.6038, 0.001));
     });
 
-    test('varying daily rates', () {
+    test('uses separate avg(cif)/avg(rate) — not per-day division', () {
+      // Inputs chosen so per-day and separate-avg formulas diverge visibly.
+      // cif = [1000, 100], rate = [1.0, 2.0]
+      // Per-day avg: mean(cif[i]/rate[i]) = mean(1000, 50) = 525
+      // Separate:   avg(cif)/avg(rate)  = 550 / 1.5 ≈ 366.667
+      // Regulation mandates the separate-avg method (NN 31/2025).
+      final pc = engine.calculateBasePrice(
+        FuelType.es95,
+        [1000.0, 100.0],
+        [1.0, 2.0],
+      );
+      // Expected: 0.755 × 366.667 / 1000 + 0.1545 = 0.2768 + 0.1545 = 0.4313
+      expect(pc, closeTo(0.4313, 0.001));
+    });
+
+    test('varying daily rates — realistic span', () {
       final prices = [700.0, 710.0, 690.0];
       final rates = [0.92, 0.93, 0.91];
+      // avg(cif) = 700, avg(rate) = 0.92
+      // PC = 0.755 × 700 / 0.92 / 1000 + 0.1545 = 0.5745 + 0.1545 = 0.7290
       final pc = engine.calculateBasePrice(FuelType.es95, prices, rates);
-      // Day 1: 700×0.755/0.92=574.457, Day 2: 710×0.755/0.93=576.559, Day 3: 690×0.755/0.91=572.198
-      // Sum=1723.214, PC=1723.214/(3×1000)+0.1545=0.5744+0.1545=0.7289
-      expect(pc, closeTo(0.7289, 0.001));
+      expect(pc, closeTo(0.7290, 0.001));
     });
   });
 

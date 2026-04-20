@@ -73,6 +73,38 @@ void main() {
     });
   });
 
+  group('settlementWindow (NN 31/2025 obračunsko razdoblje)', () {
+    test('Tuesday period start → Mon-Sun × 2 window ending publication Monday', () {
+      // P4 starts Tue 2026-04-21, publication Mon 2026-04-20,
+      // window [Mon 2026-04-06, Mon 2026-04-20) = 14 days Mon-Sun × 2.
+      final w = settlementWindow(DateTime(2026, 4, 21), 14);
+      expect(w.start, DateTime(2026, 4, 6));
+      expect(w.end, DateTime(2026, 4, 20));
+      expect(w.start.weekday, DateTime.monday);
+      // end is exclusive — last included day is Sunday
+      expect(w.end.subtract(const Duration(days: 1)).weekday, DateTime.sunday);
+    });
+
+    test('same pattern holds across DST boundary (late March 2026)', () {
+      // P3 starts Tue 2026-04-07 (DST started Sun 2026-03-29).
+      final w = settlementWindow(DateTime(2026, 4, 7), 14);
+      expect(w.start, DateTime(2026, 3, 23));
+      expect(w.end, DateTime(2026, 4, 6));
+      expect(w.start.weekday, DateTime.monday);
+    });
+
+    test('cycleDays=7 produces a 1-week window', () {
+      final w = settlementWindow(DateTime(2026, 4, 21), 7);
+      expect(w.start, DateTime(2026, 4, 13));
+      expect(w.end, DateTime(2026, 4, 20));
+    });
+
+    test('window is exactly cycleDays long', () {
+      final w = settlementWindow(DateTime(2026, 4, 21), 14);
+      expect(w.end.difference(w.start).inDays, 14);
+    });
+  });
+
   group('validateCycleDays', () {
     test('14 is valid', () {
       expect(validateCycleDays(14), 14);

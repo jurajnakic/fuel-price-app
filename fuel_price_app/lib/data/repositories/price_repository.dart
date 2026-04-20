@@ -87,8 +87,14 @@ class PriceRepository {
   }
 
   /// Calculate historical fuel prices from commodity prices + exchange rates.
-  /// For each day in the output range, applies the NN 31/2025 formula using a
-  /// 14-calendar-day observation window ending on that day.
+  ///
+  /// For each day in the output range, applies the NN 31/2025 *formula* (not
+  /// the fixed settlement window) over a trailing [windowSize]-calendar-day
+  /// window ending on that day. This produces a smoothed moving average for
+  /// charting — not a strict reg-compliant backtest (the real government
+  /// cadence uses fixed Mon-Sun × 2 windows, recomputed once per 14 days).
+  /// Values on the actual cycle boundaries should match the regulatory result.
+  ///
   /// Uses the primary data source per fuel type based on sourceWeights.
   Future<List<FuelPrice>> getCalculatedHistory(
     FuelType fuelType, {
@@ -112,19 +118,31 @@ class PriceRepository {
     late final double factor;
     late final double offset;
 
+    // Fall back to defaultParams when remote config is missing entries for
+    // this fuel — avoids silently computing with stale magic numbers.
+    final defaults = FuelParams.defaultParams;
     switch (primarySource) {
       case 'eia':
-        symbol = params.eiaSymbols[fuelType.paramKey] ?? '';
-        factor = params.eiaCifMedFactors[fuelType.paramKey] ?? 1.0;
-        offset = params.eiaCifMedOffsets[fuelType.paramKey] ?? 0.0;
+        symbol = params.eiaSymbols[fuelType.paramKey] ??
+            defaults.eiaSymbols[fuelType.paramKey] ?? '';
+        factor = params.eiaCifMedFactors[fuelType.paramKey] ??
+            defaults.eiaCifMedFactors[fuelType.paramKey] ?? 1.0;
+        offset = params.eiaCifMedOffsets[fuelType.paramKey] ??
+            defaults.eiaCifMedOffsets[fuelType.paramKey] ?? 0.0;
       case 'oilapi':
-        symbol = params.oilApiSymbols[fuelType.paramKey] ?? '';
-        factor = params.oilApiCifMedFactors[fuelType.paramKey] ?? 1.0;
-        offset = params.oilApiCifMedOffsets[fuelType.paramKey] ?? 0.0;
+        symbol = params.oilApiSymbols[fuelType.paramKey] ??
+            defaults.oilApiSymbols[fuelType.paramKey] ?? '';
+        factor = params.oilApiCifMedFactors[fuelType.paramKey] ??
+            defaults.oilApiCifMedFactors[fuelType.paramKey] ?? 1.0;
+        offset = params.oilApiCifMedOffsets[fuelType.paramKey] ??
+            defaults.oilApiCifMedOffsets[fuelType.paramKey] ?? 0.0;
       default: // yahoo
-        symbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
-        factor = params.cifMedFactors[fuelType.paramKey] ?? 399.0;
-        offset = params.cifMedOffsets[fuelType.paramKey] ?? 0.0;
+        symbol = params.yahooSymbols[fuelType.paramKey] ??
+            defaults.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
+        factor = params.cifMedFactors[fuelType.paramKey] ??
+            defaults.cifMedFactors[fuelType.paramKey] ?? 1.0;
+        offset = params.cifMedOffsets[fuelType.paramKey] ??
+            defaults.cifMedOffsets[fuelType.paramKey] ?? 0.0;
     }
 
     if (symbol.isEmpty) return [];

@@ -179,9 +179,15 @@ void callbackDispatcher() {
         }
 
         // Yahoo
-        final yahooSymbol = params.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
-        final yahooFactor = params.cifMedFactors[fuelType.paramKey] ?? 369.0;
-        final yahooOffset = params.cifMedOffsets[fuelType.paramKey] ?? 0.0;
+        // Fall back to defaultParams when remote config predates this fuel,
+        // so we use calibrated values instead of magic numbers.
+        final defaults = FuelParams.defaultParams;
+        final yahooSymbol = params.yahooSymbols[fuelType.paramKey] ??
+            defaults.yahooSymbols[fuelType.paramKey] ?? 'BZ=F';
+        final yahooFactor = params.cifMedFactors[fuelType.paramKey] ??
+            defaults.cifMedFactors[fuelType.paramKey] ?? 0.0;
+        final yahooOffset = params.cifMedOffsets[fuelType.paramKey] ??
+            defaults.cifMedOffsets[fuelType.paramKey] ?? 0.0;
         final symbolPrices = await priceRepo.getOilPrices(yahooSymbol, days: 60);
 
         if (symbolPrices.isNotEmpty) {
@@ -194,7 +200,8 @@ void callbackDispatcher() {
         // EIA
         final eiaSymbol = params.eiaSymbols[fuelType.paramKey];
         final eiaFactor = params.eiaCifMedFactors[fuelType.paramKey];
-        final eiaOffset = params.eiaCifMedOffsets[fuelType.paramKey] ?? 0.0;
+        final eiaOffset = params.eiaCifMedOffsets[fuelType.paramKey] ??
+            defaults.eiaCifMedOffsets[fuelType.paramKey] ?? 0.0;
         if (eiaSymbol != null && eiaFactor != null) {
           final eiaPrices = await priceRepo.getOilPrices(eiaSymbol, days: 60);
           if (eiaPrices.isNotEmpty) {
@@ -208,7 +215,8 @@ void callbackDispatcher() {
         // OilPriceAPI
         final oilApiSymbol = params.oilApiSymbols[fuelType.paramKey];
         final oilApiFactor = params.oilApiCifMedFactors[fuelType.paramKey];
-        final oilApiOffset = params.oilApiCifMedOffsets[fuelType.paramKey] ?? 0.0;
+        final oilApiOffset = params.oilApiCifMedOffsets[fuelType.paramKey] ??
+            defaults.oilApiCifMedOffsets[fuelType.paramKey] ?? 0.0;
         if (oilApiSymbol != null && oilApiFactor != null) {
           final oilApiPrices = await priceRepo.getOilPrices(oilApiSymbol, days: 60);
           if (oilApiPrices.isNotEmpty) {

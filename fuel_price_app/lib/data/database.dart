@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import '../models/fuel_type.dart';
 
 class AppDatabase {
   Database? _db;
@@ -110,19 +111,22 @@ class AppDatabase {
       await _createAppLogTable(db);
     }
     if (oldVersion < 6) {
-      // Seed new fuel types added in v6 (plavi_dizel, unp_spremnik). Append at end.
+      // Seed new fuel types added in v6 (plavi_dizel, unp_spremnik). Append at
+      // end of fuel_order. Use INSERT OR IGNORE so partial prior state in any
+      // table does not abort the migration on a PK collision.
       final existing = await db.query('fuel_order');
-      final names = existing.map((r) => r['fuel_type'] as String).toSet();
       int maxPos = existing.isEmpty
           ? -1
           : existing.map((r) => r['position'] as int).reduce((a, b) => a > b ? a : b);
-      // Use enum .name (stored in fuel_type column), not paramKey.
+      // Stored column uses enum .name (not paramKey).
       for (final ft in ['plaviDizel', 'unpSpremnik']) {
-        if (names.contains(ft)) continue;
         maxPos++;
-        await db.insert('fuel_order', {'fuel_type': ft, 'position': maxPos});
-        await db.insert('fuel_visibility', {'fuel_type': ft, 'visible': 1});
-        await db.insert('notification_fuels', {'fuel_type': ft, 'enabled': 1});
+        await db.insert('fuel_order', {'fuel_type': ft, 'position': maxPos},
+            conflictAlgorithm: ConflictAlgorithm.ignore);
+        await db.insert('fuel_visibility', {'fuel_type': ft, 'visible': 1},
+            conflictAlgorithm: ConflictAlgorithm.ignore);
+        await db.insert('notification_fuels', {'fuel_type': ft, 'enabled': 1},
+            conflictAlgorithm: ConflictAlgorithm.ignore);
       }
     }
   }
@@ -196,12 +200,8 @@ class AppDatabase {
 }
 
 class FuelTypeHelper {
-  static const allNames = [
-    'es95',
-    'es100',
-    'eurodizel',
-    'plaviDizel',
-    'unp10kg',
-    'unpSpremnik',
-  ];
+  /// Stored fuel_type column values — derived from the enum so adding a new
+  /// FuelType auto-extends this list (prevents silent seed/migration drift).
+  static List<String> get allNames =>
+      FuelType.values.map((e) => e.name).toList(growable: false);
 }

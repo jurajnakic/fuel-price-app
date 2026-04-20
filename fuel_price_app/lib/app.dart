@@ -299,15 +299,21 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
 
         // Collect predictions from each source
         // Yahoo
-        final yahooSymbol = _activeParams.yahooSymbols[ft.paramKey] ?? 'BZ=F';
-        final yahooFactor = _activeParams.cifMedFactors[ft.paramKey] ?? 369.0;
-        final yahooOffset = _activeParams.cifMedOffsets[ft.paramKey] ?? 0.0;
+        // Fall back to defaultParams when remote config predates this fuel.
+        final defaults = FuelParams.defaultParams;
+        final yahooSymbol = _activeParams.yahooSymbols[ft.paramKey] ??
+            defaults.yahooSymbols[ft.paramKey] ?? 'BZ=F';
+        final yahooFactor = _activeParams.cifMedFactors[ft.paramKey] ??
+            defaults.cifMedFactors[ft.paramKey] ?? 0.0;
+        final yahooOffset = _activeParams.cifMedOffsets[ft.paramKey] ??
+            defaults.cifMedOffsets[ft.paramKey] ?? 0.0;
         final yahooPrices = await _priceRepo.getOilPrices(yahooSymbol, days: 60);
 
         // EIA
         final eiaSymbol = _activeParams.eiaSymbols[ft.paramKey];
         final eiaFactor = _activeParams.eiaCifMedFactors[ft.paramKey];
-        final eiaOffset = _activeParams.eiaCifMedOffsets[ft.paramKey] ?? 0.0;
+        final eiaOffset = _activeParams.eiaCifMedOffsets[ft.paramKey] ??
+            defaults.eiaCifMedOffsets[ft.paramKey] ?? 0.0;
         final eiaPrices = eiaSymbol != null
             ? await _priceRepo.getOilPrices(eiaSymbol, days: 60)
             : <OilPrice>[];
@@ -315,7 +321,8 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         // OilPriceAPI
         final oilApiSymbol = _activeParams.oilApiSymbols[ft.paramKey];
         final oilApiFactor = _activeParams.oilApiCifMedFactors[ft.paramKey];
-        final oilApiOffset = _activeParams.oilApiCifMedOffsets[ft.paramKey] ?? 0.0;
+        final oilApiOffset = _activeParams.oilApiCifMedOffsets[ft.paramKey] ??
+            defaults.oilApiCifMedOffsets[ft.paramKey] ?? 0.0;
         final oilApiPrices = oilApiSymbol != null
             ? await _priceRepo.getOilPrices(oilApiSymbol, days: 60)
             : <OilPrice>[];

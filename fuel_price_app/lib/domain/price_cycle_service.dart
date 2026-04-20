@@ -38,11 +38,18 @@ int validateCycleDays(int cycleDays) {
 /// Settlement window per NN 31/2025: last two Mon-Sun weeks ending the Sunday
 /// before the publication Monday (which is [nextChange] - 1 day).
 ///
-/// Returns (windowStart, windowEnd) in half-open form: days [start, end).
-/// For a Tuesday period start, windowEnd is the publication Monday (so the
-/// last included day is the preceding Sunday).
+/// Returns (start, end) in half-open form: days [start, end).
+/// Assumes [nextChange] is a Tuesday (publication Monday = nextChange − 1);
+/// boundaries only land on Mon/Sun when that assumption holds. If the
+/// government ever shifts its publication cadence, this helper must be updated.
 ({DateTime start, DateTime end}) settlementWindow(DateTime nextChange, int cycleDays) {
-  final publicationDay = nextChange.subtract(const Duration(days: 1));
-  final start = publicationDay.subtract(Duration(days: cycleDays));
-  return (start: start, end: publicationDay);
+  // Use UTC midnight for date arithmetic to avoid DST 23h/25h days shifting
+  // the window by an hour across the March/October switches.
+  final anchor = DateTime.utc(nextChange.year, nextChange.month, nextChange.day);
+  final pubUtc = anchor.subtract(const Duration(days: 1));
+  final startUtc = pubUtc.subtract(Duration(days: cycleDays));
+  return (
+    start: DateTime(startUtc.year, startUtc.month, startUtc.day),
+    end: DateTime(pubUtc.year, pubUtc.month, pubUtc.day),
+  );
 }
