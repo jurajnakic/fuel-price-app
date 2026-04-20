@@ -88,11 +88,13 @@ class FuelParams {
       'unp_spremnik': 'BZ=F',
     },
     // Re-fit on Mon-Sun×2 window + avg(cif)/avg(rate) formula (NN 31/2025).
+    // Plavi dizel fit independently from eurodizel because premium+excise
+    // differential doesn't fully explain the real retail gap (~3c residual).
     this.cifMedFactors = const {
       'es95': 275.3,
       'es100': 275.3,
       'eurodizel': 10.55,
-      'plavi_dizel': 10.55,
+      'plavi_dizel': 11.54,
       'unp_10kg': 16.2,
       'unp_spremnik': 16.2,
     },
@@ -100,7 +102,7 @@ class FuelParams {
       'es95': 346.5,
       'es100': 346.5,
       'eurodizel': 312.2,
-      'plavi_dizel': 312.2,
+      'plavi_dizel': 176.7,
       'unp_10kg': 12.5,
       'unp_spremnik': 12.5,
     },
@@ -126,7 +128,7 @@ class FuelParams {
       'eurodizel': 303.0,
       'plavi_dizel': 303.0,
       'unp_10kg': 1917.0,
-      'unp_spremnik': 1917.0,
+      'unp_spremnik': 2067.3,
     },
     this.eiaCifMedOffsets = const {
       'es95': 70.0,
@@ -134,7 +136,7 @@ class FuelParams {
       'eurodizel': 105.0,
       'plavi_dizel': 105.0,
       'unp_10kg': 137.8,
-      'unp_spremnik': 137.8,
+      'unp_spremnik': -120.9,
     },
     this.oilApiCifMedFactors = const {
       'eurodizel': 1.0,
@@ -245,7 +247,7 @@ class FuelParams {
   }
 
   static const defaultParams = FuelParams(
-    version: '2026-04-21',
+    version: '2026-04-21.1',
     priceRegulation: RegulationInfo(
       name: 'Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata',
       nnReference: 'NN 31/2025',
