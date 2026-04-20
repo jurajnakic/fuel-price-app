@@ -1,6 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fuel_price_app/domain/price_cycle_service.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
+import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin;
@@ -9,23 +11,25 @@ class NotificationService {
       : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
+    tzdata.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Europe/Zagreb'));
     const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
     const initSettings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(initSettings);
   }
 
-  /// Show a price change notification immediately.
-  /// Called by WorkManager at the scheduled time.
-  Future<void> showPriceNotification({
-    required String notificationDay,
-    required Map<FuelType, ({double predicted, double? current})> fuelPredictions,
-  }) async {
-    // Build title
-    final title = notificationDay == 'monday'
-        ? 'Promjena cijene goriva sutra'
-        : 'Promjena cijene goriva u utorak';
+  static const _details = NotificationDetails(
+    android: AndroidNotificationDetails(
+      'fuel_price_channel',
+      'Cijene goriva',
+      channelDescription: 'Obavijesti o promjenama cijena goriva',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      icon: '@drawable/ic_notification',
+    ),
+  );
 
-    // Build body — only fuels with actual price changes (omit unchanged per spec)
+  String? _buildBody(Map<FuelType, ({double predicted, double? current})> fuelPredictions) {
     final lines = <String>[];
     for (final entry in fuelPredictions.entries) {
       final trend = trendIndicator(entry.value.predicted, entry.value.current);
@@ -33,25 +37,45 @@ class NotificationService {
       final priceStr = entry.value.predicted.toStringAsFixed(2).replaceAll('.', ',');
       lines.add('${entry.key.shortName}: $priceStr € $trend');
     }
+    if (lines.isEmpty) return null;
+    return lines.join(' | ');
+  }
 
-    if (lines.isEmpty) return; // Don't send empty notification
+  String _buildTitle(String notificationDay) => notificationDay == 'monday'
+      ? 'Promjena cijene goriva sutra'
+      : 'Promjena cijene goriva u utorak';
 
-    final body = lines.join(' | ');
+  /// Show a price change notification immediately.
+  Future<void> showPriceNotification({
+    required String notificationDay,
+    required Map<FuelType, ({double predicted, double? current})> fuelPredictions,
+  }) async {
+    final body = _buildBody(fuelPredictions);
+    if (body == null) return;
+    await _plugin.show(0, _buildTitle(notificationDay), body, _details);
+  }
 
-    await _plugin.show(
+  /// Schedule a price notification for [targetHour] local time today.
+  /// Used when WorkManager fires before the user's chosen notification hour —
+  /// OS delivers it at [targetHour] even if device is asleep/doze.
+  Future<void> schedulePriceNotification({
+    required String notificationDay,
+    required int targetHour,
+    required Map<FuelType, ({double predicted, double? current})> fuelPredictions,
+  }) async {
+    final body = _buildBody(fuelPredictions);
+    if (body == null) return;
+    final now = tz.TZDateTime.now(tz.local);
+    final scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, targetHour);
+    if (!scheduled.isAfter(now)) return; // don't schedule in the past
+    await _plugin.zonedSchedule(
       0,
-      title,
+      _buildTitle(notificationDay),
       body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'fuel_price_channel',
-          'Cijene goriva',
-          channelDescription: 'Obavijesti o promjenama cijena goriva',
-          importance: Importance.defaultImportance,
-          priority: Priority.defaultPriority,
-          icon: '@drawable/ic_notification',
-        ),
-      ),
+      scheduled,
+      _details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
     );
   }
 

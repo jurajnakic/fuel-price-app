@@ -245,13 +245,10 @@ void callbackDispatcher() {
         final dayMatches = (notifDay == 'monday' && todayWeekday == DateTime.monday) ||
             (notifDay == 'sunday' && todayWeekday == DateTime.sunday) ||
             (notifDay == 'saturday' && todayWeekday == DateTime.saturday);
-        // Only notify at/after configured hour — prevents Android from firing
-        // a deferred WorkManager task at midnight.
-        final hourReached = today.hour >= notifHour;
         // Dedupe — Android may flush the task more than once per day on wake.
         final notYetNotifiedToday = lastNotified != todayIso;
 
-        if (dayMatches && hourReached && notYetNotifiedToday) {
+        if (dayMatches && notYetNotifiedToday) {
           // Check which fuels are enabled for notifications
           final notifFuels = await settingsRepo.getNotificationFuels();
 
@@ -272,10 +269,22 @@ void callbackDispatcher() {
 
           final notificationService = NotificationService();
           await notificationService.init();
-          await notificationService.showPriceNotification(
-            notificationDay: notifDay,
-            fuelPredictions: fuelPredictions,
-          );
+          if (today.hour >= notifHour) {
+            // Past the configured hour — show now (WorkManager fired late or
+            // user just woke the device).
+            await notificationService.showPriceNotification(
+              notificationDay: notifDay,
+              fuelPredictions: fuelPredictions,
+            );
+          } else {
+            // WorkManager fired early — defer to the user's configured hour.
+            // OS delivers even if device is asleep/doze.
+            await notificationService.schedulePriceNotification(
+              notificationDay: notifDay,
+              targetHour: notifHour,
+              fuelPredictions: fuelPredictions,
+            );
+          }
           await settingsRepo.setLastNotifiedDate(todayIso);
         }
       }
