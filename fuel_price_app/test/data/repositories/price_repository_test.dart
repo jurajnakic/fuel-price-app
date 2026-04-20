@@ -25,7 +25,7 @@ void main() {
   tearDown(() async => await db.close());
 
   test('saves and retrieves oil prices', () async {
-    final price = OilPrice(date: DateTime(2026, 3, 20), cifMed: 700.5, source: 'BZ=F');
+    final price = OilPrice(date: DateTime.now().subtract(const Duration(days: 5)), cifMed: 700.5, source: 'BZ=F');
     await repo.saveOilPrice(price);
     final prices = await repo.getOilPrices('BZ=F', days: 30);
     expect(prices.length, 1);
@@ -33,7 +33,7 @@ void main() {
   });
 
   test('saves and retrieves exchange rates', () async {
-    final rate = ExchangeRate(date: DateTime(2026, 3, 20), usdEur: 0.92);
+    final rate = ExchangeRate(date: DateTime.now().subtract(const Duration(days: 5)), usdEur: 0.92);
     await repo.saveExchangeRate(rate);
     final rates = await repo.getExchangeRates(days: 30);
     expect(rates.length, 1);
