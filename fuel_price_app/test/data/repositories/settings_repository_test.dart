@@ -22,7 +22,7 @@ void main() {
 
   test('returns default fuel order', () async {
     final order = await repo.getFuelOrder();
-    expect(order, ['es95', 'es100', 'eurodizel', 'unp10kg']);
+    expect(order, ['es95', 'es100', 'eurodizel', 'plaviDizel', 'unp10kg', 'unpSpremnik']);
   });
 
   test('updates fuel order', () async {

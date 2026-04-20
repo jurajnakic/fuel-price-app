@@ -34,3 +34,15 @@ int validateCycleDays(int cycleDays) {
   if (cycleDays <= 0 || cycleDays % 7 != 0) return 14;
   return cycleDays;
 }
+
+/// Settlement window per NN 31/2025: last two Mon-Sun weeks ending the Sunday
+/// before the publication Monday (which is [nextChange] - 1 day).
+///
+/// Returns (windowStart, windowEnd) in half-open form: days [start, end).
+/// For a Tuesday period start, windowEnd is the publication Monday (so the
+/// last included day is the preceding Sunday).
+({DateTime start, DateTime end}) settlementWindow(DateTime nextChange, int cycleDays) {
+  final publicationDay = nextChange.subtract(const Duration(days: 1));
+  final start = publicationDay.subtract(Duration(days: cycleDays));
+  return (start: start, end: publicationDay);
+}

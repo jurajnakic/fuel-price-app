@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 
 void main() {
-  test('FuelType has 4 values', () {
-    expect(FuelType.values.length, 4);
+  test('FuelType has 6 values', () {
+    expect(FuelType.values.length, 6);
   });
 
   test('FuelType display names are correct', () {

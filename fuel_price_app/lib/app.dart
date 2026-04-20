@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:fuel_price_app/blocs/data_sync_cubit.dart';
 import 'package:fuel_price_app/blocs/fuel_list_cubit.dart';
 import 'package:fuel_price_app/blocs/settings_cubit.dart';
+import 'package:fuel_price_app/data/app_logger.dart';
 import 'package:fuel_price_app/data/database.dart';
 import 'package:fuel_price_app/data/repositories/config_repository.dart';
 import 'package:fuel_price_app/data/repositories/price_repository.dart';
@@ -45,6 +46,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
   late final PriceRepository _priceRepo;
   late final SettingsRepository _settingsRepo;
   late final ConfigRepository _configRepo;
+  late final AppLogger _logger;
   late final Dio _dio;
   late final YahooFinanceService _yahooService;
   late final HnbService _hnbService;
@@ -76,6 +78,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
 
     // Repositories
     _priceRepo = PriceRepository(widget.database);
+    _logger = AppLogger(widget.database);
     _settingsRepo = SettingsRepository(widget.database);
     _configRepo = ConfigRepository(widget.database, _remoteConfigService);
 
@@ -266,8 +269,17 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
     final engine = FormulaEngine(_activeParams);
     final rates = await _priceRepo.getExchangeRates(days: 60);
 
+    await _logger.log('fg_recalc',
+        'START activeParams.version=${_activeParams.version} '
+        'ES95=${_activeParams.cifMedFactors['es95']}/${_activeParams.cifMedOffsets['es95']} '
+        'ED=${_activeParams.cifMedFactors['eurodizel']}/${_activeParams.cifMedOffsets['eurodizel']} '
+        'edSym=${_activeParams.yahooSymbols['eurodizel']} '
+        'edWeights=${_activeParams.sourceWeights['eurodizel']} '
+        'rates=${rates.length}');
+
     if (rates.isEmpty) {
       _log('SKIP prediction — no exchange rates');
+      await _logger.log('fg_recalc', 'SKIP no rates');
       return;
     }
 
@@ -309,17 +321,16 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
             : <OilPrice>[];
 
         // Helper to compute price from a source's prices.
-        // Uses a 14-calendar-day observation window per NN 31/2025.
+        // Settlement window per NN 31/2025: 14 days Mon-Sun × 2 ending the
+        // Sunday before the publication Monday. In our half-open form the
+        // window is [nextChange - 15 days, nextChange - 1 day).
         // cifMed = raw × factor + offset (offset captures fixed CIF Med costs).
-        // [minPoints] is the minimum data points needed
-        // (5 for daily sources like Yahoo/EIA, 1 for sparse sources like OilPriceAPI).
         double? computePrice(List<OilPrice> prices, double factor, double offset, bool isCurrent, {int minPoints = 5}) {
           if (prices.isEmpty) return null;
-          // Observation window: 14 calendar days (= one price cycle)
-          final windowEnd = isCurrent ? currentPeriodStart : nextChange;
-          final windowStart = windowEnd.subtract(Duration(days: cycle));
+          final anchor = isCurrent ? currentPeriodStart : nextChange;
+          final w = settlementWindow(anchor, cycle);
           final window = prices
-              .where((p) => !p.date.isBefore(windowStart) && p.date.isBefore(windowEnd))
+              .where((p) => !p.date.isBefore(w.start) && p.date.isBefore(w.end))
               .toList();
           if (window.length < minPoints) return null;
           final cifMed = window.map((p) => p.cifMed * factor + offset).toList();
@@ -364,8 +375,14 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
             FuelPrice(fuelType: ft, date: nextChange, price: rounded, isPrediction: true),
           );
         }
+        await _logger.log('fg_predict',
+            '${ft.name} sym=${yahooSymbol} f=$yahooFactor o=$yahooOffset '
+            'weights=$weights ypts=${yahooPrices.length} epts=${eiaPrices.length} opts=${oilApiPrices.length} '
+            'nextSources=$nextSourcePrices currentSources=$currentSourcePrices '
+            'predicted=${predictedPrice?.toStringAsFixed(3) ?? "-"}');
       } catch (e) {
         _log('prediction FAILED for ${ft.name}: $e');
+        await _logger.log('fg_predict', '${ft.name} ERROR $e');
       }
     }
   }

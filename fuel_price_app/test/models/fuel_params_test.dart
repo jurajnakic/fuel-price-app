@@ -172,16 +172,25 @@ void main() {
       expect(p.sourceWeights['eurodizel']!['oilapi'], 0.0);
     });
 
-    test('defaultParams has ES95 offset 262', () {
+    test('defaultParams has ES95 offset 346.5 (NN31/2025 window re-fit)', () {
       final p = FuelParams.defaultParams;
-      expect(p.cifMedOffsets['es95'], 262.0);
-      expect(p.cifMedOffsets['es100'], 262.0);
+      expect(p.cifMedOffsets['es95'], 346.5);
+      expect(p.cifMedOffsets['es100'], 346.5);
+      expect(p.cifMedFactors['es95'], 275.3);
     });
 
-    test('defaultParams has eurodizel BZ=F factor 11.26', () {
+    test('defaultParams has eurodizel BZ=F factor 10.55 (re-fit)', () {
       final p = FuelParams.defaultParams;
-      expect(p.cifMedFactors['eurodizel'], 11.26);
-      expect(p.cifMedOffsets['eurodizel'], 236.0);
+      expect(p.cifMedFactors['eurodizel'], 10.55);
+      expect(p.cifMedOffsets['eurodizel'], 312.2);
+    });
+
+    test('defaultParams includes plavi_dizel and unp_spremnik', () {
+      final p = FuelParams.defaultParams;
+      expect(p.premiums['plavi_dizel'], 0.0781);
+      expect(p.exciseDuties['plavi_dizel'], 0.0);
+      expect(p.density['plavi_dizel'], 0.845);
+      expect(p.premiums['unp_spremnik'], 0.4116);
     });
 
     test('defaultParams has oilApiCifMedOffsets', () {

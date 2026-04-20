@@ -152,11 +152,12 @@ void callbackDispatcher() {
         return (best ?? (allRates.isNotEmpty ? allRates.last : null))?.usdEur ?? usdEurRate;
       }
 
-      // Helper: filter prices to a 14-calendar-day window per NN 31/2025.
-      List<OilPrice> windowFilter(List<OilPrice> prices, DateTime windowEnd) {
-        final windowStart = windowEnd.subtract(Duration(days: cycle));
+      // Filter prices to the NN 31/2025 settlement window (Mon-Sun × 2 ending
+      // the Sunday before publication Monday).
+      List<OilPrice> windowFilter(List<OilPrice> prices, DateTime anchor) {
+        final w = settlementWindow(anchor, cycle);
         return prices
-            .where((p) => !p.date.isBefore(windowStart) && p.date.isBefore(windowEnd))
+            .where((p) => !p.date.isBefore(w.start) && p.date.isBefore(w.end))
             .toList();
       }
 

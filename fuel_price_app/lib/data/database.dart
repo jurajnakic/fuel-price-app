@@ -16,7 +16,7 @@ class AppDatabase {
     final path = inMemory ? inMemoryDatabasePath : join(await getDatabasesPath(), 'fuel_prices.db');
     _db = await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -109,6 +109,22 @@ class AppDatabase {
     if (oldVersion < 5) {
       await _createAppLogTable(db);
     }
+    if (oldVersion < 6) {
+      // Seed new fuel types added in v6 (plavi_dizel, unp_spremnik). Append at end.
+      final existing = await db.query('fuel_order');
+      final names = existing.map((r) => r['fuel_type'] as String).toSet();
+      int maxPos = existing.isEmpty
+          ? -1
+          : existing.map((r) => r['position'] as int).reduce((a, b) => a > b ? a : b);
+      // Use enum .name (stored in fuel_type column), not paramKey.
+      for (final ft in ['plaviDizel', 'unpSpremnik']) {
+        if (names.contains(ft)) continue;
+        maxPos++;
+        await db.insert('fuel_order', {'fuel_type': ft, 'position': maxPos});
+        await db.insert('fuel_visibility', {'fuel_type': ft, 'visible': 1});
+        await db.insert('notification_fuels', {'fuel_type': ft, 'enabled': 1});
+      }
+    }
   }
 
   Future<void> _createAppLogTable(Database db) async {
@@ -180,5 +196,12 @@ class AppDatabase {
 }
 
 class FuelTypeHelper {
-  static const allNames = ['es95', 'es100', 'eurodizel', 'unp10kg'];
+  static const allNames = [
+    'es95',
+    'es100',
+    'eurodizel',
+    'plaviDizel',
+    'unp10kg',
+    'unpSpremnik',
+  ];
 }

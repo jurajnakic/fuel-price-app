@@ -83,19 +83,26 @@ class FuelParams {
       'es95': 'RB=F',
       'es100': 'RB=F',
       'eurodizel': 'BZ=F',
+      'plavi_dizel': 'BZ=F',
       'unp_10kg': 'BZ=F',
+      'unp_spremnik': 'BZ=F',
     },
+    // Re-fit on Mon-Sun×2 window + avg(cif)/avg(rate) formula (NN 31/2025).
     this.cifMedFactors = const {
-      'es95': 301.0,
-      'es100': 301.0,
-      'eurodizel': 11.26,
+      'es95': 275.3,
+      'es100': 275.3,
+      'eurodizel': 10.55,
+      'plavi_dizel': 10.55,
       'unp_10kg': 16.2,
+      'unp_spremnik': 16.2,
     },
     this.cifMedOffsets = const {
-      'es95': 262.0,
-      'es100': 262.0,
-      'eurodizel': 236.0,
+      'es95': 346.5,
+      'es100': 346.5,
+      'eurodizel': 312.2,
+      'plavi_dizel': 312.2,
       'unp_10kg': 12.5,
+      'unp_spremnik': 12.5,
     },
     this.eiaApiKey = 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
     this.oilPriceApiKey = '3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce',
@@ -103,34 +110,51 @@ class FuelParams {
       'es95': 'EER_EPMRU_PF4_Y35NY_DPG',
       'es100': 'EER_EPMRU_PF4_Y35NY_DPG',
       'eurodizel': 'EER_EPD2DXL0_PF4_Y35NY_DPG',
+      'plavi_dizel': 'EER_EPD2DXL0_PF4_Y35NY_DPG',
       'unp_10kg': 'EER_EPLLPA_PF4_Y44MB_DPG',
+      'unp_spremnik': 'EER_EPLLPA_PF4_Y44MB_DPG',
     },
     this.oilApiSymbols = const {
       'eurodizel': 'GASOIL_USD',
+      'plavi_dizel': 'GASOIL_USD',
+      'unp_10kg': 'PROPANE_MONT_BELVIEU_USD',
+      'unp_spremnik': 'PROPANE_MONT_BELVIEU_USD',
     },
     this.eiaCifMedFactors = const {
       'es95': 366.0,
       'es100': 366.0,
       'eurodizel': 303.0,
-      'unp_10kg': 2526.0,
+      'plavi_dizel': 303.0,
+      'unp_10kg': 1917.0,
+      'unp_spremnik': 1917.0,
     },
     this.eiaCifMedOffsets = const {
       'es95': 70.0,
       'es100': 70.0,
       'eurodizel': 105.0,
-      'unp_10kg': -303.0,
+      'plavi_dizel': 105.0,
+      'unp_10kg': 137.8,
+      'unp_spremnik': 137.8,
     },
     this.oilApiCifMedFactors = const {
       'eurodizel': 1.0,
+      'plavi_dizel': 1.0,
+      'unp_10kg': 3500.0,
+      'unp_spremnik': 3500.0,
     },
     this.oilApiCifMedOffsets = const {
       'eurodizel': 40.0,
+      'plavi_dizel': 40.0,
+      'unp_10kg': 0.0,
+      'unp_spremnik': 0.0,
     },
     this.sourceWeights = const {
       'es95': {'yahoo': 1.0},
       'es100': {'yahoo': 1.0},
       'eurodizel': {'yahoo': 1.0, 'oilapi': 0.0},
-      'unp_10kg': {'eia': 1.0},
+      'plavi_dizel': {'yahoo': 1.0, 'oilapi': 0.0},
+      'unp_10kg': {'eia': 1.0, 'oilapi': 0.0},
+      'unp_spremnik': {'eia': 1.0, 'oilapi': 0.0},
     },
   });
 
@@ -168,81 +192,45 @@ class FuelParams {
       yahooSymbols: json.containsKey('yahoo_symbols')
           ? (json['yahoo_symbols'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, v as String))
-          : const {
-              'es95': 'RB=F',
-              'es100': 'RB=F',
-              'eurodizel': 'BZ=F',
-              'unp_10kg': 'BZ=F',
-            },
+          : defaultParams.yahooSymbols,
       cifMedFactors: json.containsKey('cif_med_factors')
           ? (json['cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
-          : const {
-              'es95': 301.0,
-              'es100': 301.0,
-              'eurodizel': 11.26,
-              'unp_10kg': 16.2,
-            },
+          : defaultParams.cifMedFactors,
       cifMedOffsets: json.containsKey('cif_med_offsets')
           ? (json['cif_med_offsets'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
-          : const {
-              'es95': 262.0,
-              'es100': 262.0,
-              'eurodizel': 236.0,
-              'unp_10kg': 12.5,
-            },
+          : defaultParams.cifMedOffsets,
       eiaApiKey: json.containsKey('eia_api_key')
           ? json['eia_api_key'] as String
-          : 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
+          : defaultParams.eiaApiKey,
       oilPriceApiKey: json.containsKey('oil_price_api_key')
           ? json['oil_price_api_key'] as String
-          : '3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce',
+          : defaultParams.oilPriceApiKey,
       eiaSymbols: json.containsKey('eia_symbols')
           ? (json['eia_symbols'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, v as String))
-          : const {
-              'es95': 'EER_EPMRU_PF4_Y35NY_DPG',
-              'es100': 'EER_EPMRU_PF4_Y35NY_DPG',
-              'eurodizel': 'EER_EPD2DXL0_PF4_Y35NY_DPG',
-              'unp_10kg': 'EER_EPLLPA_PF4_Y44MB_DPG',
-            },
+          : defaultParams.eiaSymbols,
       oilApiSymbols: json.containsKey('oil_api_symbols')
           ? (json['oil_api_symbols'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, v as String))
-          : const {
-              'eurodizel': 'GASOIL_USD',
-            },
+          : defaultParams.oilApiSymbols,
       eiaCifMedFactors: json.containsKey('eia_cif_med_factors')
           ? (json['eia_cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
-          : const {
-              'es95': 366.0,
-              'es100': 366.0,
-              'eurodizel': 303.0,
-              'unp_10kg': 2526.0,
-            },
+          : defaultParams.eiaCifMedFactors,
       eiaCifMedOffsets: json.containsKey('eia_cif_med_offsets')
           ? (json['eia_cif_med_offsets'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
-          : const {
-              'es95': 70.0,
-              'es100': 70.0,
-              'eurodizel': 105.0,
-              'unp_10kg': -303.0,
-            },
+          : defaultParams.eiaCifMedOffsets,
       oilApiCifMedFactors: json.containsKey('oil_api_cif_med_factors')
           ? (json['oil_api_cif_med_factors'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
-          : const {
-              'eurodizel': 1.0,
-            },
+          : defaultParams.oilApiCifMedFactors,
       oilApiCifMedOffsets: json.containsKey('oil_api_cif_med_offsets')
           ? (json['oil_api_cif_med_offsets'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, (v as num).toDouble()))
-          : const {
-              'eurodizel': 40.0,
-            },
+          : defaultParams.oilApiCifMedOffsets,
       sourceWeights: json.containsKey('source_weights')
           ? (json['source_weights'] as Map<String, dynamic>).map(
               (k, v) => MapEntry(
@@ -252,17 +240,12 @@ class FuelParams {
                 ),
               ),
             )
-          : const {
-              'es95': {'yahoo': 1.0},
-              'es100': {'yahoo': 1.0},
-              'eurodizel': {'yahoo': 1.0, 'oilapi': 0.0},
-              'unp_10kg': {'eia': 1.0},
-            },
+          : defaultParams.sourceWeights,
     );
   }
 
   static const defaultParams = FuelParams(
-    version: '2025-02-26',
+    version: '2026-04-21',
     priceRegulation: RegulationInfo(
       name: 'Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata',
       nnReference: 'NN 31/2025',
@@ -275,9 +258,28 @@ class FuelParams {
       effectiveDate: '2023-01-01',
       note: 'Vlada periodički mijenja visinu trošarine zasebnim uredbama',
     ),
-    premiums: {'es95': 0.1545, 'es100': 0.1545, 'eurodizel': 0.1545, 'unp_10kg': 0.8429},
-    exciseDuties: {'es95': 0.4560, 'es100': 0.4560, 'eurodizel': 0.40613, 'unp_10kg': 0.01327},
-    density: {'es95': 0.755, 'es100': 0.755, 'eurodizel': 0.845},
+    premiums: {
+      'es95': 0.1545,
+      'es100': 0.1545,
+      'eurodizel': 0.1545,
+      'plavi_dizel': 0.0781,
+      'unp_10kg': 0.8429,
+      'unp_spremnik': 0.4116,
+    },
+    exciseDuties: {
+      'es95': 0.4560,
+      'es100': 0.4560,
+      'eurodizel': 0.40613,
+      'plavi_dizel': 0.0,
+      'unp_10kg': 0.01327,
+      'unp_spremnik': 0.01327,
+    },
+    density: {
+      'es95': 0.755,
+      'es100': 0.755,
+      'eurodizel': 0.845,
+      'plavi_dizel': 0.845,
+    },
     vatRate: 0.25,
     referenceDate: '2026-03-24',
     cycleDays: 14,

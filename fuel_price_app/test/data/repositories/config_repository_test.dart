@@ -32,7 +32,7 @@ void main() {
         .thenAnswer((_) async => FuelParams.defaultParams);
     final result = await repo.syncConfig();
     expect(result, isNotNull);
-    expect(result!.version, '2025-02-26');
+    expect(result!.version, FuelParams.defaultParams.version);
   });
 
   test('syncConfig returns null when version unchanged', () async {

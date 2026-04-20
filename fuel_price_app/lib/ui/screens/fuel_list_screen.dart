@@ -286,8 +286,8 @@ class _FuelCard extends StatelessWidget {
   static IconData _fuelIcon(FuelType ft) {
     return switch (ft) {
       FuelType.es95 || FuelType.es100 => Icons.local_gas_station,
-      FuelType.eurodizel => Icons.local_gas_station_outlined,
-      FuelType.unp10kg => Icons.propane_tank_outlined,
+      FuelType.eurodizel || FuelType.plaviDizel => Icons.local_gas_station_outlined,
+      FuelType.unp10kg || FuelType.unpSpremnik => Icons.propane_tank_outlined,
     };
   }
 

@@ -8,11 +8,13 @@ class FormulaEngine {
 
   /// Calculate base price (PC) per NN 31/2025 formula.
   ///
-  /// For liquid fuels: PC = [Σ(CIF_Med × ρ / T) / (n × 1000)] + P
-  /// For UNP (no density): PC = [Σ(CIF / T) / (n × 1000)] + P
+  /// Regulation specifies separate averages: avg(CIF) and avg(rate),
+  /// then divide — *not* per-day division averaged.
+  ///   PC = ρ × avg(CIF_Med) / avg(rate) / 1000 + P   (liquid fuels)
+  ///   PC =     avg(CIF_Med) / avg(rate) / 1000 + P   (UNP, no density)
   ///
-  /// [cifMedPrices] — daily CIF Med in USD/t
-  /// [exchangeRates] — daily USD/EUR rate (1 USD = X EUR)
+  /// [cifMedPrices] — daily CIF Med in USD/t (Platt's European Marketscan)
+  /// [exchangeRates] — daily USD/EUR middle rate (HNB) for same days
   double calculateBasePrice(
     FuelType fuelType,
     List<double> cifMedPrices,
@@ -29,17 +31,13 @@ class FormulaEngine {
     final premium = params.premiums[fuelType.paramKey]!;
     final n = cifMedPrices.length;
 
-    double sum = 0;
-    for (var i = 0; i < n; i++) {
-      if (density != null) {
-        sum += cifMedPrices[i] * density / exchangeRates[i];
-      } else {
-        // UNP: no density factor
-        sum += cifMedPrices[i] / exchangeRates[i];
-      }
-    }
+    final avgCif = cifMedPrices.reduce((a, b) => a + b) / n;
+    final avgRate = exchangeRates.reduce((a, b) => a + b) / n;
 
-    return sum / (n * 1000) + premium;
+    if (density != null) {
+      return density * avgCif / avgRate / 1000 + premium;
+    }
+    return avgCif / avgRate / 1000 + premium;
   }
 
   /// Calculate retail price: (PC + trošarina) × (1 + PDV)

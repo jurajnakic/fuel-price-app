@@ -39,7 +39,7 @@ void main() {
 
     expect(cubit.state.isLoading, false);
     // Default visibility is true for all, so all 4 fuels show (with null prices)
-    expect(cubit.state.fuels.length, 4);
+    expect(cubit.state.fuels.length, 6);
     for (final item in cubit.state.fuels) {
       expect(item.currentPrice, isNull);
       expect(item.predictedPrice, isNull);
@@ -66,7 +66,7 @@ void main() {
 
     await cubit.load();
 
-    expect(cubit.state.fuels.length, 4);
+    expect(cubit.state.fuels.length, 6);
     for (final item in cubit.state.fuels) {
       expect(item.currentPrice, 1.45);
     }
@@ -128,12 +128,12 @@ void main() {
     );
 
     await cubit.load();
-    expect(cubit.state.fuels.length, 4);
+    expect(cubit.state.fuels.length, 6);
 
     // Hide es100
     await settingsRepo.setFuelVisibility('es100', false);
     await cubit.load();
-    expect(cubit.state.fuels.length, 3);
+    expect(cubit.state.fuels.length, 5);
     expect(
       cubit.state.fuels.any((f) => f.fuelType == FuelType.es100),
       false,

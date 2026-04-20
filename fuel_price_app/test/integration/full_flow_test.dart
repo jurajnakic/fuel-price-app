@@ -62,7 +62,7 @@ void main() {
 
     // Verify fuel order defaults
     final order = await settingsRepo.getFuelOrder();
-    expect(order, ['es95', 'es100', 'eurodizel', 'unp10kg']);
+    expect(order, ['es95', 'es100', 'eurodizel', 'plaviDizel', 'unp10kg', 'unpSpremnik']);
   });
 
   test('full flow: all fuel types produce valid predictions', () async {
@@ -102,12 +102,12 @@ void main() {
   test('settings: reorder fuels and toggle visibility', () async {
     // Default order
     final defaultOrder = await settingsRepo.getFuelOrder();
-    expect(defaultOrder, ['es95', 'es100', 'eurodizel', 'unp10kg']);
+    expect(defaultOrder, ['es95', 'es100', 'eurodizel', 'plaviDizel', 'unp10kg', 'unpSpremnik']);
 
     // Reorder
-    await settingsRepo.saveFuelOrder(['eurodizel', 'es95', 'unp10kg', 'es100']);
+    await settingsRepo.saveFuelOrder(['eurodizel', 'es95', 'unp10kg', 'es100', 'plaviDizel', 'unpSpremnik']);
     final newOrder = await settingsRepo.getFuelOrder();
-    expect(newOrder, ['eurodizel', 'es95', 'unp10kg', 'es100']);
+    expect(newOrder, ['eurodizel', 'es95', 'unp10kg', 'es100', 'plaviDizel', 'unpSpremnik']);
 
     // Toggle visibility
     await settingsRepo.setFuelVisibility('es100', false);
