@@ -16,7 +16,7 @@ class AppDatabase {
     final path = inMemory ? inMemoryDatabasePath : join(await getDatabasesPath(), 'fuel_prices.db');
     _db = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -92,6 +92,7 @@ class AppDatabase {
     await db.insert('notification_settings', {'id': 1, 'enabled': 1, 'day': 'monday', 'hour': 9});
     await _createStationTables(db);
     await _createStationOrderTable(db);
+    await _createAppLogTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -105,6 +106,20 @@ class AppDatabase {
       await db.execute(
           "ALTER TABLE notification_settings ADD COLUMN last_notified_date TEXT");
     }
+    if (oldVersion < 5) {
+      await _createAppLogTable(db);
+    }
+  }
+
+  Future<void> _createAppLogTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        message TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _createStationTables(Database db) async {

@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'package:fuel_price_app/data/app_logger.dart';
 import 'package:fuel_price_app/data/database.dart';
 import 'package:fuel_price_app/data/repositories/config_repository.dart';
 import 'package:fuel_price_app/data/repositories/price_repository.dart';
@@ -49,6 +50,8 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     if (task != dailySyncTaskName) return false;
 
+    final startedAt = DateTime.now();
+    AppLogger? logger;
     try {
       // 1. Initialize database (isolate-safe — creates new instance)
       final db = AppDatabase();
@@ -57,6 +60,9 @@ void callbackDispatcher() {
       final priceRepo = PriceRepository(db);
       final settingsRepo = SettingsRepository(db);
       final configRepo = ConfigRepository(db, RemoteConfigService());
+      logger = AppLogger(db);
+      await logger.log('bg_sync',
+          'START task=$task weekday=${startedAt.weekday} hour=${startedAt.hour}:${startedAt.minute.toString().padLeft(2, '0')}');
 
       // 2. Sync remote config — update params if version changed
       final updatedParams = await configRepo.syncConfig();
@@ -229,6 +235,10 @@ void callbackDispatcher() {
             price: FormulaEngine.roundPrice(predictedBlended), isPrediction: true,
           ));
         }
+        await logger.log('predict',
+            '${fuelType.name}: current=${currentBlended?.toStringAsFixed(3) ?? "-"} '
+            'predicted=${predictedBlended?.toStringAsFixed(3) ?? "-"} '
+            'sources_cur=$currentSourcePrices sources_next=$nextSourcePrices');
       }
 
       // 6. Check notification settings and send if enabled
@@ -247,6 +257,9 @@ void callbackDispatcher() {
             (notifDay == 'saturday' && todayWeekday == DateTime.saturday);
         // Dedupe — Android may flush the task more than once per day on wake.
         final notYetNotifiedToday = lastNotified != todayIso;
+
+        await logger.log('notif',
+            'day=$notifDay weekday=$todayWeekday notifHour=$notifHour hour=${today.hour} dayMatches=$dayMatches notYet=$notYetNotifiedToday lastNotified=$lastNotified');
 
         if (dayMatches && notYetNotifiedToday) {
           // Check which fuels are enabled for notifications
@@ -270,20 +283,18 @@ void callbackDispatcher() {
           final notificationService = NotificationService();
           await notificationService.init();
           if (today.hour >= notifHour) {
-            // Past the configured hour — show now (WorkManager fired late or
-            // user just woke the device).
             await notificationService.showPriceNotification(
               notificationDay: notifDay,
               fuelPredictions: fuelPredictions,
             );
+            await logger.log('notif', 'SHOW now (${fuelPredictions.length} fuels): ${_formatPredictions(fuelPredictions)}');
           } else {
-            // WorkManager fired early — defer to the user's configured hour.
-            // OS delivers even if device is asleep/doze.
             await notificationService.schedulePriceNotification(
               notificationDay: notifDay,
               targetHour: notifHour,
               fuelPredictions: fuelPredictions,
             );
+            await logger.log('notif', 'SCHEDULE for $notifHour:00 (${fuelPredictions.length} fuels): ${_formatPredictions(fuelPredictions)}');
           }
           await settingsRepo.setLastNotifiedDate(todayIso);
         }
@@ -292,10 +303,23 @@ void callbackDispatcher() {
       // 7. Clean old data (keep last 800 days for yearly charts)
       await priceRepo.cleanOldData(const Duration(days: 800));
 
+      final duration = DateTime.now().difference(startedAt);
+      await logger.log('bg_sync', 'END ok duration=${duration.inSeconds}s predictions=${predictions.length}');
       await db.close();
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      try {
+        await logger?.log('bg_sync', 'ERROR $e\n$st');
+      } catch (_) {}
       return false;
     }
   });
+}
+
+String _formatPredictions(Map<FuelType, ({double predicted, double? current})> m) {
+  final parts = <String>[];
+  for (final e in m.entries) {
+    parts.add('${e.key.name}=${e.value.predicted.toStringAsFixed(2)}(cur=${e.value.current?.toStringAsFixed(2) ?? "-"})');
+  }
+  return parts.join(' ');
 }
