@@ -16,7 +16,7 @@ class AppDatabase {
     final path = inMemory ? inMemoryDatabasePath : join(await getDatabasesPath(), 'fuel_prices.db');
     _db = await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -65,7 +65,8 @@ class AppDatabase {
         id INTEGER PRIMARY KEY CHECK (id = 1),
         enabled INTEGER NOT NULL DEFAULT 1,
         day TEXT NOT NULL DEFAULT 'monday',
-        hour INTEGER NOT NULL DEFAULT 9
+        hour INTEGER NOT NULL DEFAULT 9,
+        last_notified_date TEXT
       )
     ''');
     await db.execute('''
@@ -99,6 +100,10 @@ class AppDatabase {
     }
     if (oldVersion < 3) {
       await _createStationOrderTable(db);
+    }
+    if (oldVersion < 4) {
+      await db.execute(
+          "ALTER TABLE notification_settings ADD COLUMN last_notified_date TEXT");
     }
   }
 
@@ -152,6 +157,9 @@ class AppDatabase {
 
   Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<dynamic>? args]) =>
       _db!.rawQuery(sql, args);
+
+  Future<T> transaction<T>(Future<T> Function(Transaction txn) action) =>
+      _db!.transaction<T>(action);
 
   Future<void> close() async => await _db?.close();
 }

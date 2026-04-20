@@ -20,23 +20,21 @@ int zagrebUtcOffset(DateTime utcDate) {
   return 1; // CET
 }
 
-/// Returns the next 18:00 Zagreb local time as a UTC DateTime.
-DateTime nextFetchTime(DateTime nowUtc) {
+/// Returns the next occurrence of [targetLocalHour] Zagreb local time as UTC.
+DateTime nextFetchTime(DateTime nowUtc, {int targetLocalHour = 9}) {
   final offset = zagrebUtcOffset(nowUtc);
   final localHour = nowUtc.hour + offset;
 
-  if (localHour < 18) {
-    // Today at 18:00 local = (18 - offset) in UTC
-    return DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day, 18 - offset);
+  if (localHour < targetLocalHour) {
+    return DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day, targetLocalHour - offset);
   } else {
-    // Tomorrow at 18:00 local
     final tomorrow = nowUtc.add(const Duration(days: 1));
     final tomorrowOffset = zagrebUtcOffset(tomorrow);
-    return DateTime.utc(tomorrow.year, tomorrow.month, tomorrow.day, 18 - tomorrowOffset);
+    return DateTime.utc(tomorrow.year, tomorrow.month, tomorrow.day, targetLocalHour - tomorrowOffset);
   }
 }
 
-/// Duration until next 18:00 Zagreb time.
-Duration initialFetchDelay(DateTime nowUtc) {
-  return nextFetchTime(nowUtc).difference(nowUtc);
+/// Duration until next [targetLocalHour] Zagreb time.
+Duration initialFetchDelay(DateTime nowUtc, {int targetLocalHour = 9}) {
+  return nextFetchTime(nowUtc, targetLocalHour: targetLocalHour).difference(nowUtc);
 }

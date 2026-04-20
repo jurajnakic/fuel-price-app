@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:fuel_price_app/data/repositories/settings_repository.dart';
+import 'package:fuel_price_app/scheduling/background_sync.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsState extends Equatable {
@@ -109,6 +110,8 @@ class SettingsCubit extends Cubit<SettingsState> {
   Future<void> setNotificationHour(int hour) async {
     await settingsRepo.saveNotificationSettings(hour: hour);
     emit(state.copyWith(notificationHour: hour));
+    // Re-register WorkManager so its next fire targets the new hour.
+    await initBackgroundSync(targetLocalHour: hour, replace: true);
   }
 
   Future<void> toggleNotifications() async {

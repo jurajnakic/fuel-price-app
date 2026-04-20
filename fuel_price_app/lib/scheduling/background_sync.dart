@@ -23,11 +23,13 @@ import 'package:fuel_price_app/scheduling/schedule_helper.dart';
 
 const dailySyncTaskName = 'dailyFuelPriceSync';
 
-/// Initialize WorkManager for background data fetch at 18:00 CET.
-Future<void> initBackgroundSync() async {
+/// Initialize WorkManager for background data fetch at the user's configured
+/// notification hour (Zagreb local time). If the user changes the hour via
+/// settings, call this again with [replace] to re-register.
+Future<void> initBackgroundSync({int targetLocalHour = 9, bool replace = false}) async {
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
 
-  final delay = initialFetchDelay(DateTime.now().toUtc());
+  final delay = initialFetchDelay(DateTime.now().toUtc(), targetLocalHour: targetLocalHour);
 
   await Workmanager().registerPeriodicTask(
     dailySyncTaskName,
@@ -37,7 +39,7 @@ Future<void> initBackgroundSync() async {
     constraints: Constraints(
       networkType: NetworkType.connected,
     ),
-    existingWorkPolicy: ExistingWorkPolicy.keep,
+    existingWorkPolicy: replace ? ExistingWorkPolicy.replace : ExistingWorkPolicy.keep,
   );
 }
 
@@ -129,10 +131,20 @@ void callbackDispatcher() {
       final nextChange = nextPriceChangeDate(today, refDate, cycle);
       final currentPeriodStart = nextChange.subtract(Duration(days: cycle));
 
-      // Find exchange rate from before current period for "current" price
+      // All historical rates — used to pick per-date rate for each window point
+      // per NN 31/2025 (fixed-rate produced ~1c mismatch vs foreground predictions).
       final allRates = await priceRepo.getExchangeRates(days: 60);
-      final ratesBeforePeriod = allRates.where((r) => r.date.isBefore(currentPeriodStart)).toList();
-      final currentRate = ratesBeforePeriod.isNotEmpty ? ratesBeforePeriod.last.usdEur : usdEurRate;
+
+      // Find exchange rate closest to (but not after) [date]; falls back to nearest.
+      double findRate(DateTime date) {
+        final dateOnly = DateTime(date.year, date.month, date.day);
+        ExchangeRate? best;
+        for (final r in allRates) {
+          final rDate = DateTime(r.date.year, r.date.month, r.date.day);
+          if (!rDate.isAfter(dateOnly)) best = r;
+        }
+        return (best ?? (allRates.isNotEmpty ? allRates.last : null))?.usdEur ?? usdEurRate;
+      }
 
       // Helper: filter prices to a 14-calendar-day window per NN 31/2025.
       List<OilPrice> windowFilter(List<OilPrice> prices, DateTime windowEnd) {
@@ -150,12 +162,12 @@ void callbackDispatcher() {
         final nextSourcePrices = <String, double>{};
 
         // Helper: compute price for a source in a given window
-        // cifMed = raw × factor + offset
-        double? computeSource(List<OilPrice> prices, double factor, double offset, DateTime windowEnd, double rate, {int minPoints = 5}) {
+        // cifMed = raw × factor + offset; rates are per-date (NN 31/2025).
+        double? computeSource(List<OilPrice> prices, double factor, double offset, DateTime windowEnd, {int minPoints = 5}) {
           final window = windowFilter(prices, windowEnd);
           if (window.length < minPoints) return null;
           final cif = window.map((p) => p.cifMed * factor + offset).toList();
-          final rates = List.filled(cif.length, rate);
+          final rates = window.map((p) => findRate(p.date)).toList();
           return engine.predictPrice(fuelType, cif, rates);
         }
 
@@ -166,9 +178,9 @@ void callbackDispatcher() {
         final symbolPrices = await priceRepo.getOilPrices(yahooSymbol, days: 60);
 
         if (symbolPrices.isNotEmpty) {
-          final yc = computeSource(symbolPrices, yahooFactor, yahooOffset, currentPeriodStart, currentRate);
+          final yc = computeSource(symbolPrices, yahooFactor, yahooOffset, currentPeriodStart);
           if (yc != null) currentSourcePrices['yahoo'] = yc;
-          final yn = computeSource(symbolPrices, yahooFactor, yahooOffset, nextChange, usdEurRate, minPoints: 1);
+          final yn = computeSource(symbolPrices, yahooFactor, yahooOffset, nextChange, minPoints: 1);
           if (yn != null) nextSourcePrices['yahoo'] = yn;
         }
 
@@ -179,9 +191,9 @@ void callbackDispatcher() {
         if (eiaSymbol != null && eiaFactor != null) {
           final eiaPrices = await priceRepo.getOilPrices(eiaSymbol, days: 60);
           if (eiaPrices.isNotEmpty) {
-            final ec = computeSource(eiaPrices, eiaFactor, eiaOffset, currentPeriodStart, currentRate);
+            final ec = computeSource(eiaPrices, eiaFactor, eiaOffset, currentPeriodStart);
             if (ec != null) currentSourcePrices['eia'] = ec;
-            final en = computeSource(eiaPrices, eiaFactor, eiaOffset, nextChange, usdEurRate, minPoints: 1);
+            final en = computeSource(eiaPrices, eiaFactor, eiaOffset, nextChange, minPoints: 1);
             if (en != null) nextSourcePrices['eia'] = en;
           }
         }
@@ -193,9 +205,9 @@ void callbackDispatcher() {
         if (oilApiSymbol != null && oilApiFactor != null) {
           final oilApiPrices = await priceRepo.getOilPrices(oilApiSymbol, days: 60);
           if (oilApiPrices.isNotEmpty) {
-            final oc = computeSource(oilApiPrices, oilApiFactor, oilApiOffset, currentPeriodStart, currentRate, minPoints: 1);
+            final oc = computeSource(oilApiPrices, oilApiFactor, oilApiOffset, currentPeriodStart, minPoints: 1);
             if (oc != null) currentSourcePrices['oilapi'] = oc;
-            final on_ = computeSource(oilApiPrices, oilApiFactor, oilApiOffset, nextChange, usdEurRate, minPoints: 1);
+            final on_ = computeSource(oilApiPrices, oilApiFactor, oilApiOffset, nextChange, minPoints: 1);
             if (on_ != null) nextSourcePrices['oilapi'] = on_;
           }
         }
@@ -225,13 +237,21 @@ void callbackDispatcher() {
 
       if (notifEnabled) {
         final notifDay = notifSettings['day'] as String;
+        final notifHour = (notifSettings['hour'] as int?) ?? 9;
+        final lastNotified = notifSettings['last_notified_date'] as String?;
         final todayWeekday = today.weekday; // 1=Mon, 6=Sat, 7=Sun
+        final todayIso = today.toIso8601String().substring(0, 10);
 
-        final shouldNotify = (notifDay == 'monday' && todayWeekday == DateTime.monday) ||
+        final dayMatches = (notifDay == 'monday' && todayWeekday == DateTime.monday) ||
             (notifDay == 'sunday' && todayWeekday == DateTime.sunday) ||
             (notifDay == 'saturday' && todayWeekday == DateTime.saturday);
+        // Only notify at/after configured hour — prevents Android from firing
+        // a deferred WorkManager task at midnight.
+        final hourReached = today.hour >= notifHour;
+        // Dedupe — Android may flush the task more than once per day on wake.
+        final notYetNotifiedToday = lastNotified != todayIso;
 
-        if (shouldNotify) {
+        if (dayMatches && hourReached && notYetNotifiedToday) {
           // Check which fuels are enabled for notifications
           final notifFuels = await settingsRepo.getNotificationFuels();
 
@@ -256,6 +276,7 @@ void callbackDispatcher() {
             notificationDay: notifDay,
             fuelPredictions: fuelPredictions,
           );
+          await settingsRepo.setLastNotifiedDate(todayIso);
         }
       }
 

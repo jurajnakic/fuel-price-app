@@ -12,12 +12,13 @@ class PriceRepository {
   PriceRepository(this.db);
 
   Future<void> saveOilPrice(OilPrice price) async {
-    // Upsert: delete existing for same date+source, then insert
     final dateStr = price.date.toIso8601String().substring(0, 10);
-    await db.delete('oil_prices',
-        where: 'date LIKE ? AND source = ?',
-        whereArgs: ['$dateStr%', price.source]);
-    await db.insert('oil_prices', price.toMap());
+    await db.transaction((txn) async {
+      await txn.delete('oil_prices',
+          where: 'date LIKE ? AND source = ?',
+          whereArgs: ['$dateStr%', price.source]);
+      await txn.insert('oil_prices', price.toMap());
+    });
   }
 
   Future<List<OilPrice>> getOilPrices(String source, {required int days}) async {
@@ -33,9 +34,11 @@ class PriceRepository {
 
   Future<void> saveExchangeRate(ExchangeRate rate) async {
     final dateStr = rate.date.toIso8601String().substring(0, 10);
-    await db.delete('exchange_rates',
-        where: 'date LIKE ?', whereArgs: ['$dateStr%']);
-    await db.insert('exchange_rates', rate.toMap());
+    await db.transaction((txn) async {
+      await txn.delete('exchange_rates',
+          where: 'date LIKE ?', whereArgs: ['$dateStr%']);
+      await txn.insert('exchange_rates', rate.toMap());
+    });
   }
 
   Future<List<ExchangeRate>> getExchangeRates({required int days}) async {
@@ -50,11 +53,15 @@ class PriceRepository {
   }
 
   Future<void> saveFuelPrice(FuelPrice price) async {
-    // Upsert: delete existing for same fuel type + prediction type, then insert fresh
-    await db.delete('fuel_prices',
-        where: 'fuel_type = ? AND is_prediction = ?',
-        whereArgs: [price.fuelType.name, price.isPrediction ? 1 : 0]);
-    await db.insert('fuel_prices', price.toMap());
+    // Atomic upsert — without the transaction, concurrent readers can hit the
+    // window between DELETE and INSERT and see no row, causing the UI to
+    // briefly show "-" for predictions during sync.
+    await db.transaction((txn) async {
+      await txn.delete('fuel_prices',
+          where: 'fuel_type = ? AND is_prediction = ?',
+          whereArgs: [price.fuelType.name, price.isPrediction ? 1 : 0]);
+      await txn.insert('fuel_prices', price.toMap());
+    });
   }
 
   Future<FuelPrice?> getLatestPrice(FuelType fuelType, {required bool prediction}) async {
