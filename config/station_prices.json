@@ -1,5 +1,5 @@
 {
-  "updated": "2026-04-21",
+  "updated": "2026-04-22",
   "validity": "21.04.2026 - 05.05.2026",
   "source": "cijenegoriva.info + hak.hr",
   "stations": [
@@ -7,7 +7,7 @@
       "id": "ina",
       "name": "INA",
       "url": "https://www.ina.hr",
-      "updated": "2026-04-21",
+      "updated": "2026-04-22",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -45,7 +45,7 @@
       "id": "lukoil",
       "name": "Lukoil",
       "url": "https://www.lukoil.hr",
-      "updated": "2026-04-21",
+      "updated": "2026-04-22",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -83,7 +83,7 @@
       "id": "petrol",
       "name": "Petrol",
       "url": "https://www.petrol.hr",
-      "updated": "2026-04-21",
+      "updated": "2026-04-22",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -116,7 +116,7 @@
       "id": "shell",
       "name": "Shell",
       "url": "https://www.shell.hr",
-      "updated": "2026-04-21",
+      "updated": "2026-04-22",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -149,7 +149,7 @@
       "id": "tifon",
       "name": "Tifon",
       "url": "https://tifon.hr",
-      "updated": "2026-04-21",
+      "updated": "2026-04-22",
       "fuels": [
         {
           "name": "Eurosuper 95",
