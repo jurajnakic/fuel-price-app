@@ -1,4 +1,3 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'package:fuel_price_app/data/app_logger.dart';
@@ -250,63 +249,40 @@ void callbackDispatcher() {
             'sources_cur=$currentSourcePrices sources_next=$nextSourcePrices');
       }
 
-      // 6. Check notification settings and send if enabled
+      // 6. (Re-)schedule next notification with fresh predictions.
+      // Decoupled from WorkManager timing — exact alarm via flutter_local_notifications
+      // fires under Doze regardless of when (or if) the next bg_sync runs.
       final notifSettings = await settingsRepo.getNotificationSettings();
       final notifEnabled = (notifSettings['enabled'] as int) == 1;
 
       if (notifEnabled) {
         final notifDay = notifSettings['day'] as String;
         final notifHour = (notifSettings['hour'] as int?) ?? 9;
-        final lastNotified = notifSettings['last_notified_date'] as String?;
-        final todayWeekday = today.weekday; // 1=Mon, 6=Sat, 7=Sun
-        final todayIso = today.toIso8601String().substring(0, 10);
+        final notifFuels = await settingsRepo.getNotificationFuels();
 
-        final dayMatches = (notifDay == 'monday' && todayWeekday == DateTime.monday) ||
-            (notifDay == 'sunday' && todayWeekday == DateTime.sunday) ||
-            (notifDay == 'saturday' && todayWeekday == DateTime.saturday);
-        // Dedupe — Android may flush the task more than once per day on wake.
-        final notYetNotifiedToday = lastNotified != todayIso;
-
-        await logger.log('notif',
-            'day=$notifDay weekday=$todayWeekday notifHour=$notifHour hour=${today.hour} dayMatches=$dayMatches notYet=$notYetNotifiedToday lastNotified=$lastNotified');
-
-        if (dayMatches && notYetNotifiedToday) {
-          // Check which fuels are enabled for notifications
-          final notifFuels = await settingsRepo.getNotificationFuels();
-
-          final fuelPredictions =
-              <FuelType, ({double predicted, double? current})>{};
-
-          for (final fuelType in FuelType.values) {
-            if (notifFuels[fuelType.name] != true) continue;
-            if (!predictions.containsKey(fuelType)) continue;
-
-            final currentPrice =
-                await priceRepo.getLatestPrice(fuelType, prediction: false);
-            fuelPredictions[fuelType] = (
-              predicted: predictions[fuelType]!,
-              current: currentPrice?.price,
-            );
-          }
-
-          final notificationService = NotificationService();
-          await notificationService.init();
-          if (today.hour >= notifHour) {
-            await notificationService.showPriceNotification(
-              notificationDay: notifDay,
-              fuelPredictions: fuelPredictions,
-            );
-            await logger.log('notif', 'SHOW now (${fuelPredictions.length} fuels): ${_formatPredictions(fuelPredictions)}');
-          } else {
-            await notificationService.schedulePriceNotification(
-              notificationDay: notifDay,
-              targetHour: notifHour,
-              fuelPredictions: fuelPredictions,
-            );
-            await logger.log('notif', 'SCHEDULE for $notifHour:00 (${fuelPredictions.length} fuels): ${_formatPredictions(fuelPredictions)}');
-          }
-          await settingsRepo.setLastNotifiedDate(todayIso);
+        final fuelPredictions =
+            <FuelType, ({double predicted, double? current})>{};
+        for (final fuelType in FuelType.values) {
+          if (notifFuels[fuelType.name] != true) continue;
+          if (!predictions.containsKey(fuelType)) continue;
+          final currentPrice =
+              await priceRepo.getLatestPrice(fuelType, prediction: false);
+          fuelPredictions[fuelType] = (
+            predicted: predictions[fuelType]!,
+            current: currentPrice?.price,
+          );
         }
+
+        final notificationService = NotificationService();
+        await notificationService.init();
+        final scheduled = await notificationService.scheduleNextPriceNotification(
+          notificationDay: notifDay,
+          notifHour: notifHour,
+          fuelPredictions: fuelPredictions,
+        );
+        await logger.log('notif',
+            'SCHEDULE_NEXT day=$notifDay hour=$notifHour at=${scheduled?.toIso8601String() ?? "(none — no trend changes)"} '
+            '(${fuelPredictions.length} fuels): ${_formatPredictions(fuelPredictions)}');
       }
 
       // 7. Clean old data (keep last 800 days for yearly charts)

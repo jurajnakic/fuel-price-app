@@ -24,6 +24,7 @@ import 'package:fuel_price_app/models/fuel_params.dart';
 import 'package:fuel_price_app/models/fuel_price.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/models/oil_price.dart';
+import 'package:fuel_price_app/notifications/notification_service.dart';
 import 'package:fuel_price_app/blocs/stations_cubit.dart';
 import 'package:fuel_price_app/data/services/station_price_service.dart';
 import 'package:fuel_price_app/data/repositories/station_repository.dart';
@@ -183,7 +184,8 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
       formulaEngine: FormulaEngine(_activeParams),
     );
 
-    _settingsCubit = SettingsCubit(settingsRepo: _settingsRepo);
+    _settingsCubit = SettingsCubit(settingsRepo: _settingsRepo)
+      ..onNotificationSettingsChanged = _scheduleNotificationIfEnabled;
 
     _initApp();
   }
@@ -266,6 +268,11 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
   }
 
   Future<void> _recalculatePredictions() async {
+    await _runRecalculate();
+    await _scheduleNotificationIfEnabled();
+  }
+
+  Future<void> _runRecalculate() async {
     final engine = FormulaEngine(_activeParams);
     final rates = await _priceRepo.getExchangeRates(days: 60);
 
@@ -391,6 +398,51 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         _log('prediction FAILED for ${ft.name}: $e');
         await _logger.log('fg_predict', '${ft.name} ERROR $e');
       }
+    }
+  }
+
+  /// Re-schedule the next price-change notification using predictions from the
+  /// DB. Called after every foreground recalc and whenever notification
+  /// settings change, so the body reflects latest data even if WorkManager
+  /// never runs in the background.
+  Future<void> _scheduleNotificationIfEnabled() async {
+    try {
+      final notifSettings = await _settingsRepo.getNotificationSettings();
+      final enabled = (notifSettings['enabled'] as int) == 1;
+      if (!enabled) {
+        await NotificationService().cancelAll();
+        await _logger.log('notif', 'CANCEL — notifications disabled');
+        return;
+      }
+      final notifDay = notifSettings['day'] as String;
+      final notifHour = (notifSettings['hour'] as int?) ?? 9;
+      final notifFuels = await _settingsRepo.getNotificationFuels();
+
+      final fuelPredictions =
+          <FuelType, ({double predicted, double? current})>{};
+      for (final ft in FuelType.values) {
+        if (notifFuels[ft.name] != true) continue;
+        final predicted = await _priceRepo.getLatestPrice(ft, prediction: true);
+        if (predicted == null) continue;
+        final currentPrice = await _priceRepo.getLatestPrice(ft, prediction: false);
+        fuelPredictions[ft] = (
+          predicted: predicted.price,
+          current: currentPrice?.price,
+        );
+      }
+
+      final svc = NotificationService();
+      await svc.init();
+      final scheduled = await svc.scheduleNextPriceNotification(
+        notificationDay: notifDay,
+        notifHour: notifHour,
+        fuelPredictions: fuelPredictions,
+      );
+      await _logger.log('notif',
+          'SCHEDULE_NEXT(fg) day=$notifDay hour=$notifHour at=${scheduled?.toIso8601String() ?? "(none)"} (${fuelPredictions.length} fuels)');
+    } catch (e) {
+      _log('schedule notification failed: $e');
+      await _logger.log('notif', 'SCHEDULE_NEXT ERROR $e');
     }
   }
 

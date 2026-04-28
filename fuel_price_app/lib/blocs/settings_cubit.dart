@@ -50,6 +50,10 @@ class SettingsState extends Equatable {
 class SettingsCubit extends Cubit<SettingsState> {
   final SettingsRepository settingsRepo;
 
+  /// Called after any change that affects notification scheduling. App layer
+  /// hooks this to re-schedule the next notification with fresh predictions.
+  Future<void> Function()? onNotificationSettingsChanged;
+
   SettingsCubit({required this.settingsRepo}) : super(const SettingsState());
 
   Future<void> load() async {
@@ -100,11 +104,13 @@ class SettingsCubit extends Cubit<SettingsState> {
     final updated = Map<String, bool>.from(state.notificationFuels);
     updated[fuelType] = !current;
     emit(state.copyWith(notificationFuels: updated));
+    await onNotificationSettingsChanged?.call();
   }
 
   Future<void> setNotificationDay(String day) async {
     await settingsRepo.saveNotificationSettings(day: day);
     emit(state.copyWith(notificationDay: day));
+    await onNotificationSettingsChanged?.call();
   }
 
   Future<void> setNotificationHour(int hour) async {
@@ -112,11 +118,13 @@ class SettingsCubit extends Cubit<SettingsState> {
     emit(state.copyWith(notificationHour: hour));
     // Re-register WorkManager so its next fire targets the new hour.
     await initBackgroundSync(targetLocalHour: hour, replace: true);
+    await onNotificationSettingsChanged?.call();
   }
 
   Future<void> toggleNotifications() async {
     final newValue = !state.notificationsEnabled;
     await settingsRepo.saveNotificationSettings(enabled: newValue);
     emit(state.copyWith(notificationsEnabled: newValue));
+    await onNotificationSettingsChanged?.call();
   }
 }

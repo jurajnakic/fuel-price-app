@@ -49,11 +49,6 @@ class SettingsRepository {
     }
   }
 
-  Future<void> setLastNotifiedDate(String isoDate) async {
-    await db.update('notification_settings', {'last_notified_date': isoDate},
-        where: 'id = 1');
-  }
-
   // --- Notification Fuels ---
 
   Future<Map<String, bool>> getNotificationFuels() async {

@@ -29,6 +29,8 @@ class NotificationService {
     ),
   );
 
+  static const int _notificationId = 0;
+
   String? _buildBody(Map<FuelType, ({double predicted, double? current})> fuelPredictions) {
     final lines = <String>[];
     for (final entry in fuelPredictions.entries) {
@@ -45,40 +47,54 @@ class NotificationService {
       ? 'Promjena cijene goriva sutra'
       : 'Promjena cijene goriva u utorak';
 
-  /// Show a price change notification immediately.
-  Future<void> showPriceNotification({
-    required String notificationDay,
-    required Map<FuelType, ({double predicted, double? current})> fuelPredictions,
-  }) async {
-    final body = _buildBody(fuelPredictions);
-    if (body == null) return;
-    await _plugin.show(0, _buildTitle(notificationDay), body, _details);
+  /// Compute the next occurrence of [targetWeekday] at [hour]:00 in Zagreb time.
+  /// If today matches [targetWeekday] but it's past [hour], advances to next week.
+  static tz.TZDateTime nextScheduledTime(String day, int hour) {
+    final targetWeekday = switch (day) {
+      'monday' => DateTime.monday,
+      'saturday' => DateTime.saturday,
+      'sunday' => DateTime.sunday,
+      _ => DateTime.monday,
+    };
+    final now = tz.TZDateTime.now(tz.local);
+    var candidate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour);
+    // Advance day-by-day until weekday matches AND time is in the future.
+    while (candidate.weekday != targetWeekday || !candidate.isAfter(now)) {
+      candidate = tz.TZDateTime(tz.local, candidate.year, candidate.month,
+          candidate.day + 1, hour);
+    }
+    return candidate;
   }
 
-  /// Schedule a price notification for [targetHour] local time today.
-  /// Used when WorkManager fires before the user's chosen notification hour —
-  /// OS delivers it at [targetHour] even if device is asleep/doze.
-  Future<void> schedulePriceNotification({
+  /// Schedule the next price-change notification at [notifHour] on the next
+  /// matching [notificationDay], using an exact alarm so it fires under Doze
+  /// regardless of WorkManager state. Replaces any pending notification.
+  ///
+  /// Returns the scheduled time, or null if there's nothing to notify (no
+  /// fuels with a non-flat trend).
+  Future<tz.TZDateTime?> scheduleNextPriceNotification({
     required String notificationDay,
-    required int targetHour,
+    required int notifHour,
     required Map<FuelType, ({double predicted, double? current})> fuelPredictions,
   }) async {
     final body = _buildBody(fuelPredictions);
-    if (body == null) return;
-    final now = tz.TZDateTime.now(tz.local);
-    final scheduled =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, targetHour);
-    if (!scheduled.isAfter(now)) return; // don't schedule in the past
+    // Always cancel pending so stale predictions don't get delivered if the
+    // current run has nothing to show.
+    await _plugin.cancel(_notificationId);
+    if (body == null) return null;
+
+    final scheduled = nextScheduledTime(notificationDay, notifHour);
     await _plugin.zonedSchedule(
-      0,
+      _notificationId,
       _buildTitle(notificationDay),
       body,
       scheduled,
       _details,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
+    return scheduled;
   }
 
   Future<void> cancelAll() async {
