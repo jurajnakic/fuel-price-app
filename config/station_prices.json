@@ -1,13 +1,13 @@
 {
-  "updated": "2026-05-04",
-  "validity": "21.04.2026 - 05.05.2026",
+  "updated": "2026-05-05",
+  "validity": "05.05.2026 - 19.05.2026",
   "source": "cijenegoriva.info + hak.hr",
   "stations": [
     {
       "id": "ina",
       "name": "INA",
       "url": "https://www.ina.hr",
-      "updated": "2026-05-04",
+      "updated": "2026-05-05",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -17,17 +17,17 @@
         {
           "name": "Eurosuper 95 Premium",
           "type": "es95_premium",
-          "price": 1.77
+          "price": 1.8
         },
         {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 2.08
+          "price": 2.0
         },
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.78
+          "price": 1.72
         },
         {
           "name": "Eurodizel Premium",
@@ -37,7 +37,7 @@
         {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 1.03
+          "price": 0.95
         }
       ]
     },
@@ -45,7 +45,7 @@
       "id": "lukoil",
       "name": "Lukoil",
       "url": "https://www.lukoil.hr",
-      "updated": "2026-05-04",
+      "updated": "2026-05-05",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -65,17 +65,17 @@
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.78
+          "price": 1.72
         },
         {
           "name": "Eurodizel Premium",
           "type": "eurodizel_premium",
-          "price": 1.94
+          "price": 1.88
         },
         {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 1.02
+          "price": 0.95
         }
       ]
     },
@@ -83,7 +83,7 @@
       "id": "petrol",
       "name": "Petrol",
       "url": "https://www.petrol.hr",
-      "updated": "2026-05-04",
+      "updated": "2026-05-05",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -93,12 +93,12 @@
         {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 2.09
+          "price": 2.13
         },
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.78
+          "price": 1.72
         },
         {
           "name": "Eurodizel Premium",
@@ -108,7 +108,7 @@
         {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 1.02
+          "price": 0.94
         }
       ]
     },
@@ -116,7 +116,7 @@
       "id": "shell",
       "name": "Shell",
       "url": "https://www.shell.hr",
-      "updated": "2026-05-04",
+      "updated": "2026-05-05",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -126,22 +126,22 @@
         {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 2.07
+          "price": 2.18
         },
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.78
+          "price": 1.72
         },
         {
           "name": "Eurodizel Premium",
           "type": "eurodizel_premium",
-          "price": 2.18
+          "price": 2.01
         },
         {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 1.08
+          "price": 0.95
         }
       ]
     },
@@ -149,7 +149,7 @@
       "id": "tifon",
       "name": "Tifon",
       "url": "https://tifon.hr",
-      "updated": "2026-05-04",
+      "updated": "2026-05-05",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -159,22 +159,22 @@
         {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 2.08
+          "price": 2.11
         },
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.78
+          "price": 1.72
         },
         {
           "name": "Eurodizel Premium",
           "type": "eurodizel_premium",
-          "price": 2.02
+          "price": 2.0
         },
         {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 1.01
+          "price": 0.93
         }
       ]
     }
