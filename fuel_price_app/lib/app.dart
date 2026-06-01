@@ -25,6 +25,7 @@ import 'package:fuel_price_app/models/fuel_price.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/models/oil_price.dart';
 import 'package:fuel_price_app/notifications/notification_service.dart';
+import 'package:fuel_price_app/scheduling/sync_lock.dart';
 import 'package:fuel_price_app/blocs/stations_cubit.dart';
 import 'package:fuel_price_app/data/services/station_price_service.dart';
 import 'package:fuel_price_app/data/repositories/station_repository.dart';
@@ -273,6 +274,21 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
   }
 
   Future<void> _runRecalculate() async {
+    // Single-flight: bail if a bg_sync is mid-flight to avoid partial-state DB
+    // read by UI while bg_sync writes are still in progress.
+    final acquired = await SyncLock.tryAcquire(ttl: const Duration(minutes: 2));
+    if (!acquired) {
+      await _logger.log('fg_recalc', 'SKIP another sync in progress');
+      return;
+    }
+    try {
+      await _runRecalculateLocked();
+    } finally {
+      await SyncLock.release();
+    }
+  }
+
+  Future<void> _runRecalculateLocked() async {
     final engine = FormulaEngine(_activeParams);
     final rates = await _priceRepo.getExchangeRates(days: 60);
 

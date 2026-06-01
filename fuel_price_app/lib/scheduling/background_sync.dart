@@ -20,6 +20,7 @@ import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/models/oil_price.dart';
 import 'package:fuel_price_app/notifications/notification_service.dart';
 import 'package:fuel_price_app/scheduling/schedule_helper.dart';
+import 'package:fuel_price_app/scheduling/sync_lock.dart';
 
 const dailySyncTaskName = 'dailyFuelPriceSync';
 
@@ -51,6 +52,7 @@ void callbackDispatcher() {
 
     final startedAt = DateTime.now();
     AppLogger? logger;
+    bool lockHeld = false;
     try {
       // 1. Initialize database (isolate-safe — creates new instance)
       final db = AppDatabase();
@@ -60,6 +62,16 @@ void callbackDispatcher() {
       final settingsRepo = SettingsRepository(db);
       final configRepo = ConfigRepository(db, RemoteConfigService());
       logger = AppLogger(db);
+
+      // Single-flight: bail if another sync (bg or fg) holds the lock. Prevents
+      // the 3×-parallel-WM-fire flooding seen in earlier logs.
+      lockHeld = await SyncLock.tryAcquire();
+      if (!lockHeld) {
+        await logger.log('bg_sync', 'SKIP another sync in progress');
+        await db.close();
+        return true;
+      }
+
       await logger.log('bg_sync',
           'START task=$task weekday=${startedAt.weekday} hour=${startedAt.hour}:${startedAt.minute.toString().padLeft(2, '0')}');
 
@@ -297,6 +309,12 @@ void callbackDispatcher() {
         await logger?.log('bg_sync', 'ERROR $e\n$st');
       } catch (_) {}
       return false;
+    } finally {
+      if (lockHeld) {
+        try {
+          await SyncLock.release();
+        } catch (_) {}
+      }
     }
   });
 }
