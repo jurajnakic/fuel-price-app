@@ -172,17 +172,28 @@ void main() {
       expect(p.sourceWeights['eurodizel']!['oilapi'], 0.0);
     });
 
-    test('defaultParams has ES95 offset 346.5 (NN31/2025 window re-fit)', () {
+    test('defaultParams has ES95 P5 LS fit (2026-05-04)', () {
       final p = FuelParams.defaultParams;
-      expect(p.cifMedOffsets['es95'], 346.5);
-      expect(p.cifMedOffsets['es100'], 346.5);
-      expect(p.cifMedFactors['es95'], 275.3);
+      expect(p.cifMedFactors['es95'], 256.280);
+      expect(p.cifMedFactors['es100'], 256.280);
+      expect(p.cifMedOffsets['es95'], 397.277);
+      expect(p.cifMedOffsets['es100'], 397.277);
     });
 
-    test('defaultParams has eurodizel BZ=F factor 10.55 (re-fit)', () {
+    test('defaultParams has eurodizel/plavi P5 LS fit', () {
       final p = FuelParams.defaultParams;
-      expect(p.cifMedFactors['eurodizel'], 10.55);
-      expect(p.cifMedOffsets['eurodizel'], 312.2);
+      expect(p.cifMedFactors['eurodizel'], 9.505);
+      expect(p.cifMedOffsets['eurodizel'], 400.134);
+      expect(p.cifMedFactors['plavi_dizel'], 10.343);
+      expect(p.cifMedOffsets['plavi_dizel'], 277.130);
+    });
+
+    test('defaultParams UNP forced to constant predictor (factor=0)', () {
+      final p = FuelParams.defaultParams;
+      expect(p.eiaCifMedFactors['unp_10kg'], 0.0);
+      expect(p.eiaCifMedFactors['unp_spremnik'], 0.0);
+      expect(p.eiaCifMedOffsets['unp_10kg'], 1459.84);
+      expect(p.eiaCifMedOffsets['unp_spremnik'], 1306.21);
     });
 
     test('defaultParams includes plavi_dizel and unp_spremnik', () {

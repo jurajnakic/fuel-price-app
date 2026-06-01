@@ -87,22 +87,24 @@ class FuelParams {
       'unp_10kg': 'BZ=F',
       'unp_spremnik': 'BZ=F',
     },
-    // Re-fit on Mon-Sun×2 window + avg(cif)/avg(rate) formula (NN 31/2025).
-    // Plavi dizel fit independently from eurodizel because premium+excise
-    // differential doesn't fully explain the real retail gap (~3c residual).
+    // P5 LS fit (2026-05-04): refit on 5 P-points (P1-P5) using prod-matched
+    // settlement window (half-open [start, end), per-date HNB rate, available
+    // trading days only). ES95 fits ±1c. Diesel/plavi ±9c — Brent vs EU CIF Med
+    // structural gap. UNP forced to constant predictor (factor=0) because EIA
+    // propan and HR retail UNP showed anti-correlation in P4/P5.
     this.cifMedFactors = const {
-      'es95': 275.3,
-      'es100': 275.3,
-      'eurodizel': 10.55,
-      'plavi_dizel': 11.54,
+      'es95': 256.280,
+      'es100': 256.280,
+      'eurodizel': 9.505,
+      'plavi_dizel': 10.343,
       'unp_10kg': 16.2,
       'unp_spremnik': 16.2,
     },
     this.cifMedOffsets = const {
-      'es95': 346.5,
-      'es100': 346.5,
-      'eurodizel': 312.2,
-      'plavi_dizel': 176.7,
+      'es95': 397.277,
+      'es100': 397.277,
+      'eurodizel': 400.134,
+      'plavi_dizel': 277.130,
       'unp_10kg': 12.5,
       'unp_spremnik': 12.5,
     },
@@ -127,16 +129,16 @@ class FuelParams {
       'es100': 366.0,
       'eurodizel': 303.0,
       'plavi_dizel': 303.0,
-      'unp_10kg': 1917.0,
-      'unp_spremnik': 2067.3,
+      'unp_10kg': 0.0,
+      'unp_spremnik': 0.0,
     },
     this.eiaCifMedOffsets = const {
       'es95': 70.0,
       'es100': 70.0,
       'eurodizel': 105.0,
       'plavi_dizel': 105.0,
-      'unp_10kg': 137.8,
-      'unp_spremnik': -120.9,
+      'unp_10kg': 1459.84,
+      'unp_spremnik': 1306.21,
     },
     this.oilApiCifMedFactors = const {
       'eurodizel': 1.0,
@@ -247,7 +249,7 @@ class FuelParams {
   }
 
   static const defaultParams = FuelParams(
-    version: '2026-04-21.1',
+    version: '2026-05-04.1',
     priceRegulation: RegulationInfo(
       name: 'Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata',
       nnReference: 'NN 31/2025',
