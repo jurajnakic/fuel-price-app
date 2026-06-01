@@ -100,4 +100,16 @@ class NotificationService {
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }
+
+  /// Diagnostic: post a notification immediately (no scheduling, no Doze).
+  /// If this works but scheduled notifications don't, the FLN scheduled-payload
+  /// pathway (or OEM background block) is broken.
+  Future<void> showTestNow() async {
+    await _plugin.show(
+      _notificationId,
+      'Test obavijest',
+      'Vrijeme: ${DateTime.now().toIso8601String()}',
+      _details,
+    );
+  }
 }

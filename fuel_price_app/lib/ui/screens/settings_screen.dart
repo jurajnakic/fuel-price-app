@@ -7,6 +7,7 @@ import 'package:fuel_price_app/blocs/settings_cubit.dart';
 import 'package:fuel_price_app/blocs/fuel_list_cubit.dart';
 import 'package:fuel_price_app/models/fuel_type.dart';
 import 'package:fuel_price_app/models/fuel_params.dart';
+import 'package:fuel_price_app/notifications/notification_service.dart';
 import 'package:fuel_price_app/ui/widgets/disclaimer_dialog.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -35,6 +36,21 @@ class SettingsScreen extends StatelessWidget {
                 _buildDayTile(context, state),
                 _buildHourTile(context, state),
               ],
+              ListTile(
+                leading: const Icon(Icons.send_outlined),
+                title: const Text('Pošalji test obavijest'),
+                subtitle: const Text('Dijagnostika: prikazuje se odmah'),
+                onTap: () async {
+                  final svc = NotificationService();
+                  await svc.init();
+                  await svc.showTestNow();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Test obavijest poslana')),
+                    );
+                  }
+                },
+              ),
 
               const Divider(indent: 16, endIndent: 16),
 
