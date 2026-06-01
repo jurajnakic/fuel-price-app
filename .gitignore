@@ -1,0 +1,8 @@
+# Throwaway device/debug DB snapshots pulled via ADB — not source
+*.db
+
+# Local agent/IDE settings
+.claude/settings.local.json
+
+# Scratch test logs
+testlog*.txt
