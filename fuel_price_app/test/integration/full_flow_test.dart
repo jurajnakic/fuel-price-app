@@ -30,9 +30,12 @@ void main() {
   tearDown(() async => await db.close());
 
   test('full flow: seed data → calculate → retrieve prediction', () async {
-    // Seed 14 days of oil prices and exchange rates
+    // Seed 14 days of oil prices and exchange rates, anchored to "now" so the
+    // data always falls within the repository's relative day-window queries
+    // (getOilPrices/getExchangeRates use DateTime.now() - days as cutoff).
+    final base = DateTime.now().subtract(const Duration(days: 14));
     for (var i = 0; i < 14; i++) {
-      final date = DateTime(2026, 3, 10 + i);
+      final date = base.add(Duration(days: i));
       await priceRepo.saveOilPrice(OilPrice(date: date, cifMed: 700.0, source: 'BZ=F'));
       await priceRepo.saveExchangeRate(ExchangeRate(date: date, usdEur: 0.92));
     }
@@ -66,9 +69,10 @@ void main() {
   });
 
   test('full flow: all fuel types produce valid predictions', () async {
-    // Seed data
+    // Seed data anchored to "now" (see note in the first test above).
+    final base = DateTime.now().subtract(const Duration(days: 14));
     for (var i = 0; i < 14; i++) {
-      final date = DateTime(2026, 3, 10 + i);
+      final date = base.add(Duration(days: i));
       await priceRepo.saveOilPrice(OilPrice(date: date, cifMed: 700.0, source: 'BZ=F'));
       await priceRepo.saveExchangeRate(ExchangeRate(date: date, usdEur: 0.92));
     }

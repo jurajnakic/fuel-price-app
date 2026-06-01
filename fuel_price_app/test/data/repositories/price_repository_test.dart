@@ -58,11 +58,14 @@ void main() {
   });
 
   test('getPriceHistory reflects upsert — latest non-prediction wins', () async {
+    // Dates anchored to "now" so they fall within getPriceHistory's relative
+    // day-window (DateTime.now() - days cutoff), independent of run date.
+    final now = DateTime.now();
     await repo.saveFuelPrice(FuelPrice(
-      fuelType: FuelType.es95, date: DateTime(2026, 3, 10), price: 1.45, isPrediction: false));
+      fuelType: FuelType.es95, date: now.subtract(const Duration(days: 20)), price: 1.45, isPrediction: false));
     // saveFuelPrice upserts by (fuelType, isPrediction), so this replaces the previous row
     await repo.saveFuelPrice(FuelPrice(
-      fuelType: FuelType.es95, date: DateTime(2026, 3, 24), price: 1.48, isPrediction: false));
+      fuelType: FuelType.es95, date: now.subtract(const Duration(days: 5)), price: 1.48, isPrediction: false));
     final history = await repo.getPriceHistory(FuelType.es95, days: 30);
     expect(history.length, 1);
     expect(history.first.price, 1.48);
