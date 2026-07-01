@@ -1,33 +1,43 @@
 {
-  "updated": "2026-06-30",
-  "validity": "",
+  "updated": "2026-07-01",
+  "validity": "30.06.2026 - 14.07.2026",
   "source": "cijenegoriva.info + hak.hr",
   "stations": [
     {
       "id": "ina",
       "name": "INA",
       "url": "https://www.ina.hr",
-      "updated": "2026-06-30",
+      "updated": "2026-07-01",
       "fuels": [
         {
           "name": "Eurosuper 95",
           "type": "es95",
-          "price": 1.57
+          "price": 1.54
+        },
+        {
+          "name": "Eurosuper 95 Premium",
+          "type": "es95_premium",
+          "price": 1.66
         },
         {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 1.91
+          "price": 1.96
         },
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.59
+          "price": 1.54
+        },
+        {
+          "name": "Eurodizel Premium",
+          "type": "eurodizel_premium",
+          "price": 1.75
         },
         {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 0.71
+          "price": 0.7
         }
       ]
     },
@@ -35,27 +45,27 @@
       "id": "lukoil",
       "name": "Lukoil",
       "url": "https://www.lukoil.hr",
-      "updated": "2026-06-30",
+      "updated": "2026-07-01",
       "fuels": [
         {
           "name": "Eurosuper 95",
           "type": "es95",
-          "price": 1.57
+          "price": 1.54
         },
         {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 1.91
+          "price": 1.96
         },
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.59
+          "price": 1.54
         },
         {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 0.68
+          "price": 0.67
         }
       ]
     },
@@ -63,12 +73,45 @@
       "id": "petrol",
       "name": "Petrol",
       "url": "https://www.petrol.hr",
-      "updated": "2026-06-30",
+      "updated": "2026-07-01",
       "fuels": [
         {
           "name": "Eurosuper 95",
           "type": "es95",
-          "price": 1.57
+          "price": 1.54
+        },
+        {
+          "name": "Eurosuper 100",
+          "type": "es100",
+          "price": 1.98
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.54
+        },
+        {
+          "name": "Eurodizel Premium",
+          "type": "eurodizel_premium",
+          "price": 1.77
+        },
+        {
+          "name": "Autoplin (LPG)",
+          "type": "lpg",
+          "price": 0.7
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "name": "Shell",
+      "url": "https://www.shell.hr",
+      "updated": "2026-07-01",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.54
         },
         {
           "name": "Eurosuper 100",
@@ -78,35 +121,12 @@
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.59
+          "price": 1.54
         },
         {
-          "name": "Autoplin (LPG)",
-          "type": "lpg",
-          "price": 0.71
-        }
-      ]
-    },
-    {
-      "id": "shell",
-      "name": "Shell",
-      "url": "https://www.shell.hr",
-      "updated": "2026-06-30",
-      "fuels": [
-        {
-          "name": "Eurosuper 95",
-          "type": "es95",
-          "price": 1.57
-        },
-        {
-          "name": "Eurosuper 100",
-          "type": "es100",
-          "price": 2.0
-        },
-        {
-          "name": "Eurodizel",
-          "type": "eurodizel",
-          "price": 1.59
+          "name": "Eurodizel Premium",
+          "type": "eurodizel_premium",
+          "price": 1.8
         },
         {
           "name": "Autoplin (LPG)",
@@ -119,22 +139,27 @@
       "id": "tifon",
       "name": "Tifon",
       "url": "https://tifon.hr",
-      "updated": "2026-06-30",
+      "updated": "2026-07-01",
       "fuels": [
         {
           "name": "Eurosuper 95",
           "type": "es95",
-          "price": 1.57
+          "price": 1.54
         },
         {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 1.91
+          "price": 1.96
         },
         {
           "name": "Eurodizel",
           "type": "eurodizel",
-          "price": 1.7
+          "price": 1.54
+        },
+        {
+          "name": "Eurodizel Premium",
+          "type": "eurodizel_premium",
+          "price": 1.75
         },
         {
           "name": "Autoplin (LPG)",
