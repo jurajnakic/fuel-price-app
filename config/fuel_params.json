@@ -1,5 +1,5 @@
 {
-  "version": "2026-04-21.1",
+  "version": "2026-07-24.1",
   "price_cycle": {
     "reference_date": "2026-03-24",
     "cycle_days": 14
@@ -25,8 +25,8 @@
     "unp_spremnik": 0.4116
   },
   "excise_duties": {
-    "es95": 0.4560,
-    "es100": 0.4560,
+    "es95": 0.456,
+    "es100": 0.456,
     "eurodizel": 0.40613,
     "plavi_dizel": 0.0,
     "unp_10kg": 0.01327,
@@ -48,23 +48,23 @@
     "unp_spremnik": "BZ=F"
   },
   "cif_med_factors": {
-    "es95": 275.3,
-    "es100": 275.3,
-    "eurodizel": 10.55,
-    "plavi_dizel": 11.54,
+    "es95": 383.647,
+    "es100": 383.647,
+    "eurodizel": 8.276,
+    "plavi_dizel": 9.197,
     "unp_10kg": 16.2,
     "unp_spremnik": 16.2
   },
   "cif_med_offsets": {
-    "es95": 346.5,
-    "es100": 346.5,
-    "eurodizel": 312.2,
-    "plavi_dizel": 176.7,
+    "es95": -57.679,
+    "es100": -57.679,
+    "eurodizel": 429.433,
+    "plavi_dizel": 279.678,
     "unp_10kg": 12.5,
     "unp_spremnik": 12.5
   },
   "eia_api_key": "TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h",
-  "oil_price_api_key": "3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce",
+  "oil_price_api_key": "79fb860081d26b9db83855f5d12beb9cd0d83392ac6b44ab23416600237c58c7",
   "eia_symbols": {
     "es95": "EER_EPMRU_PF4_Y35NY_DPG",
     "es100": "EER_EPMRU_PF4_Y35NY_DPG",
@@ -84,35 +84,51 @@
     "es100": 366.0,
     "eurodizel": 303.0,
     "plavi_dizel": 303.0,
-    "unp_10kg": 1917.0,
-    "unp_spremnik": 2067.3
+    "unp_10kg": 1374.335,
+    "unp_spremnik": 1270.884
   },
   "eia_cif_med_offsets": {
     "es95": 70.0,
     "es100": 70.0,
     "eurodizel": 105.0,
     "plavi_dizel": 105.0,
-    "unp_10kg": 137.8,
-    "unp_spremnik": -120.9
+    "unp_10kg": -101.94,
+    "unp_spremnik": -176.761
   },
   "oil_api_cif_med_factors": {
-    "eurodizel": 1.0,
-    "plavi_dizel": 1.0,
-    "unp_10kg": 3500.0,
-    "unp_spremnik": 3500.0
+    "eurodizel": 0.8708,
+    "plavi_dizel": 0.9765,
+    "unp_10kg": 1166.446,
+    "unp_spremnik": 1076.654
   },
   "oil_api_cif_med_offsets": {
-    "eurodizel": 40.0,
-    "plavi_dizel": 40.0,
-    "unp_10kg": 0.0,
-    "unp_spremnik": 0.0
+    "eurodizel": 229.789,
+    "plavi_dizel": 48.104,
+    "unp_10kg": 50.643,
+    "unp_spremnik": -34.083
   },
   "source_weights": {
-    "es95": {"yahoo": 1.0},
-    "es100": {"yahoo": 1.0},
-    "eurodizel": {"yahoo": 1.0, "oilapi": 0.0},
-    "plavi_dizel": {"yahoo": 1.0, "oilapi": 0.0},
-    "unp_10kg": {"eia": 1.0, "oilapi": 0.0},
-    "unp_spremnik": {"eia": 1.0, "oilapi": 0.0}
+    "es95": {
+      "yahoo": 1.0
+    },
+    "es100": {
+      "yahoo": 1.0
+    },
+    "eurodizel": {
+      "yahoo": 0.0,
+      "oilapi": 1.0
+    },
+    "plavi_dizel": {
+      "yahoo": 0.0,
+      "oilapi": 1.0
+    },
+    "unp_10kg": {
+      "eia": 0.0,
+      "oilapi": 1.0
+    },
+    "unp_spremnik": {
+      "eia": 0.0,
+      "oilapi": 1.0
+    }
   }
 }

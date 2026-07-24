@@ -140,7 +140,8 @@ void main() {
       expect(params.eiaCifMedFactors, isNotEmpty);
       expect(params.oilApiCifMedFactors, isNotEmpty);
       expect(params.sourceWeights, isNotEmpty);
-      expect(params.sourceWeights['eurodizel']!['yahoo'], 1.0);
+      expect(params.sourceWeights['eurodizel']!['yahoo'], 0.0);
+      expect(params.sourceWeights['eurodizel']!['oilapi'], 1.0);
     });
 
     test('fromJson parses EIA/OilAPI fields from JSON', () {
@@ -168,32 +169,50 @@ void main() {
       final p = FuelParams.defaultParams;
       expect(p.eiaSymbols['eurodizel'], 'EER_EPD2DXL0_PF4_Y35NY_DPG');
       expect(p.oilApiSymbols['eurodizel'], 'GASOIL_USD');
-      expect(p.sourceWeights['eurodizel']!['yahoo'], 1.0);
-      expect(p.sourceWeights['eurodizel']!['oilapi'], 0.0);
+      expect(p.sourceWeights['eurodizel']!['yahoo'], 0.0);
+      expect(p.sourceWeights['eurodizel']!['oilapi'], 1.0);
     });
 
-    test('defaultParams has ES95 P5 LS fit (2026-05-04)', () {
+    test('defaultParams has ES95 P10 LS fit (2026-07-24)', () {
       final p = FuelParams.defaultParams;
-      expect(p.cifMedFactors['es95'], 256.280);
-      expect(p.cifMedFactors['es100'], 256.280);
-      expect(p.cifMedOffsets['es95'], 397.277);
-      expect(p.cifMedOffsets['es100'], 397.277);
+      expect(p.cifMedFactors['es95'], 383.647);
+      expect(p.cifMedFactors['es100'], 383.647);
+      expect(p.cifMedOffsets['es95'], -57.679);
+      expect(p.cifMedOffsets['es100'], -57.679);
     });
 
-    test('defaultParams has eurodizel/plavi P5 LS fit', () {
+    test('defaultParams routes diesel and LPG through OilPriceAPI', () {
       final p = FuelParams.defaultParams;
-      expect(p.cifMedFactors['eurodizel'], 9.505);
-      expect(p.cifMedOffsets['eurodizel'], 400.134);
-      expect(p.cifMedFactors['plavi_dizel'], 10.343);
-      expect(p.cifMedOffsets['plavi_dizel'], 277.130);
+      for (final fuel in ['eurodizel', 'plavi_dizel', 'unp_10kg', 'unp_spremnik']) {
+        expect(p.sourceWeights[fuel]!['oilapi'], 1.0, reason: fuel);
+        expect(p.oilApiSymbols[fuel], isNotNull, reason: fuel);
+        expect(p.oilApiCifMedFactors[fuel], isNotNull, reason: fuel);
+      }
+      expect(p.oilApiSymbols['eurodizel'], 'GASOIL_USD');
+      expect(p.oilApiSymbols['unp_10kg'], 'PROPANE_MONT_BELVIEU_USD');
     });
 
-    test('defaultParams UNP forced to constant predictor (factor=0)', () {
+    test('defaultParams has GASOIL P10 LS fit for diesel', () {
       final p = FuelParams.defaultParams;
-      expect(p.eiaCifMedFactors['unp_10kg'], 0.0);
-      expect(p.eiaCifMedFactors['unp_spremnik'], 0.0);
-      expect(p.eiaCifMedOffsets['unp_10kg'], 1459.84);
-      expect(p.eiaCifMedOffsets['unp_spremnik'], 1306.21);
+      expect(p.oilApiCifMedFactors['eurodizel'], 0.8708);
+      expect(p.oilApiCifMedOffsets['eurodizel'], 229.789);
+      expect(p.oilApiCifMedFactors['plavi_dizel'], 0.9765);
+      expect(p.oilApiCifMedOffsets['plavi_dizel'], 48.104);
+    });
+
+    test('defaultParams has Mont Belvieu P10 LS fit for LPG', () {
+      final p = FuelParams.defaultParams;
+      expect(p.oilApiCifMedFactors['unp_10kg'], 1166.446);
+      expect(p.oilApiCifMedOffsets['unp_10kg'], 50.643);
+      expect(p.oilApiCifMedFactors['unp_spremnik'], 1076.654);
+      expect(p.oilApiCifMedOffsets['unp_spremnik'], -34.083);
+    });
+
+    test('LPG fallback coefficients are no longer a constant predictor', () {
+      // The old factor=0 constant predictor drifted to +65c by P10.
+      final p = FuelParams.defaultParams;
+      expect(p.eiaCifMedFactors['unp_10kg'], greaterThan(0));
+      expect(p.eiaCifMedFactors['unp_spremnik'], greaterThan(0));
     });
 
     test('defaultParams includes plavi_dizel and unp_spremnik', () {
@@ -204,9 +223,14 @@ void main() {
       expect(p.premiums['unp_spremnik'], 0.4116);
     });
 
-    test('defaultParams has oilApiCifMedOffsets', () {
+    test('defaultParams has oilApiCifMedOffsets for every OilAPI fuel', () {
       final p = FuelParams.defaultParams;
-      expect(p.oilApiCifMedOffsets['eurodizel'], 40.0);
+      expect(p.oilApiCifMedOffsets['eurodizel'], 229.789);
+      // Regression: defaultParams used to override this map with just
+      // {'eurodizel': 40.0}, nulling the LPG offsets.
+      for (final fuel in p.oilApiSymbols.keys) {
+        expect(p.oilApiCifMedOffsets[fuel], isNotNull, reason: fuel);
+      }
     });
 
     test('fromJson parses oil_api_cif_med_offsets', () {
@@ -218,7 +242,7 @@ void main() {
 
     test('fromJson uses default oilApiCifMedOffsets when missing', () {
       final params = FuelParams.fromJson(_baseJson());
-      expect(params.oilApiCifMedOffsets['eurodizel'], 40.0);
+      expect(params.oilApiCifMedOffsets['eurodizel'], 229.789);
     });
   });
 }

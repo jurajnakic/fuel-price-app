@@ -87,29 +87,36 @@ class FuelParams {
       'unp_10kg': 'BZ=F',
       'unp_spremnik': 'BZ=F',
     },
-    // P5 LS fit (2026-05-04): refit on 5 P-points (P1-P5) using prod-matched
+    // P10 LS fit (2026-07-24, fit_p10.py): refit on P1-P10 using prod-matched
     // settlement window (half-open [start, end), per-date HNB rate, available
-    // trading days only). ES95 fits ±1c. Diesel/plavi ±9c — Brent vs EU CIF Med
-    // structural gap. UNP forced to constant predictor (factor=0) because EIA
-    // propan and HR retail UNP showed anti-correlation in P4/P5.
+    // trading days only).
+    //
+    // Yahoo (Brent/RBOB) is no longer the primary source for diesel or LPG —
+    // see sourceWeights below. These coefficients remain because PriceBlender
+    // falls back to equal weights across whatever sources have data when the
+    // weighted source is missing, so they must not be stale.
+    //   ES95/ES100: fit on P5-P10 (regime shift — the P1-P5 fit drifted to
+    //     +4/+9/+6c on P8-P10). Errors on P5-P10: 0/+1/-2/-1/+2/-1c.
+    //   Eurodizel/plavi: best Brent fit (P5-P10), ~4c. GASOIL does 2c.
     this.cifMedFactors = const {
-      'es95': 256.280,
-      'es100': 256.280,
-      'eurodizel': 9.505,
-      'plavi_dizel': 10.343,
+      'es95': 383.647,
+      'es100': 383.647,
+      'eurodizel': 8.276,
+      'plavi_dizel': 9.197,
       'unp_10kg': 16.2,
       'unp_spremnik': 16.2,
     },
     this.cifMedOffsets = const {
-      'es95': 397.277,
-      'es100': 397.277,
-      'eurodizel': 400.134,
-      'plavi_dizel': 277.130,
+      'es95': -57.679,
+      'es100': -57.679,
+      'eurodizel': 429.433,
+      'plavi_dizel': 279.678,
       'unp_10kg': 12.5,
       'unp_spremnik': 12.5,
     },
     this.eiaApiKey = 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
-    this.oilPriceApiKey = '3275b97a0611f342bff1f4253e9d0158e00a0d33d0f3d512df25db60eb07f3ce',
+    // Key rotated 2026-07-24; free tier is now 200 req/month (was 50).
+    this.oilPriceApiKey = '79fb860081d26b9db83855f5d12beb9cd0d83392ac6b44ab23416600237c58c7',
     this.eiaSymbols = const {
       'es95': 'EER_EPMRU_PF4_Y35NY_DPG',
       'es100': 'EER_EPMRU_PF4_Y35NY_DPG',
@@ -129,36 +136,46 @@ class FuelParams {
       'es100': 366.0,
       'eurodizel': 303.0,
       'plavi_dizel': 303.0,
-      'unp_10kg': 0.0,
-      'unp_spremnik': 0.0,
+      // EIA propane is the fallback for LPG, not the primary source. The old
+      // constant predictor (factor=0) drifted to +65c by P10 as HR LPG kept
+      // falling; this is the P7-P10 fit, which at least has the right sign.
+      'unp_10kg': 1374.335,
+      'unp_spremnik': 1270.884,
     },
     this.eiaCifMedOffsets = const {
       'es95': 70.0,
       'es100': 70.0,
       'eurodizel': 105.0,
       'plavi_dizel': 105.0,
-      'unp_10kg': 1459.84,
-      'unp_spremnik': 1306.21,
+      'unp_10kg': -101.940,
+      'unp_spremnik': -176.761,
     },
+    // Primary source for diesel and LPG as of 2026-07-24.
+    //   GASOIL_USD (ICE Rotterdam), fit on P5-P10: eurodizel MAE 2.0c,
+    //     plavi 2.3c. Factor is stable across fit windows (0.871 vs 0.846),
+    //     so this is a real relationship, not an overfit.
+    //   PROPANE_MONT_BELVIEU_USD, fit on P7-P10: MAE 4.0c. Fitted on the
+    //     recent window only because Mont Belvieu has just 2-3 points per
+    //     14-day window and the earliest ones are noise.
     this.oilApiCifMedFactors = const {
-      'eurodizel': 1.0,
-      'plavi_dizel': 1.0,
-      'unp_10kg': 3500.0,
-      'unp_spremnik': 3500.0,
+      'eurodizel': 0.8708,
+      'plavi_dizel': 0.9765,
+      'unp_10kg': 1166.446,
+      'unp_spremnik': 1076.654,
     },
     this.oilApiCifMedOffsets = const {
-      'eurodizel': 40.0,
-      'plavi_dizel': 40.0,
-      'unp_10kg': 0.0,
-      'unp_spremnik': 0.0,
+      'eurodizel': 229.789,
+      'plavi_dizel': 48.104,
+      'unp_10kg': 50.643,
+      'unp_spremnik': -34.083,
     },
     this.sourceWeights = const {
       'es95': {'yahoo': 1.0},
       'es100': {'yahoo': 1.0},
-      'eurodizel': {'yahoo': 1.0, 'oilapi': 0.0},
-      'plavi_dizel': {'yahoo': 1.0, 'oilapi': 0.0},
-      'unp_10kg': {'eia': 1.0, 'oilapi': 0.0},
-      'unp_spremnik': {'eia': 1.0, 'oilapi': 0.0},
+      'eurodizel': {'yahoo': 0.0, 'oilapi': 1.0},
+      'plavi_dizel': {'yahoo': 0.0, 'oilapi': 1.0},
+      'unp_10kg': {'eia': 0.0, 'oilapi': 1.0},
+      'unp_spremnik': {'eia': 0.0, 'oilapi': 1.0},
     },
   });
 
@@ -249,7 +266,7 @@ class FuelParams {
   }
 
   static const defaultParams = FuelParams(
-    version: '2026-05-04.1',
+    version: '2026-07-24.1',
     priceRegulation: RegulationInfo(
       name: 'Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata',
       nnReference: 'NN 31/2025',
@@ -287,6 +304,8 @@ class FuelParams {
     vatRate: 0.25,
     referenceDate: '2026-03-24',
     cycleDays: 14,
-    oilApiCifMedOffsets: {'eurodizel': 40.0},
+    // NB: do not re-add an oilApiCifMedOffsets override here. It used to carry
+    // only {'eurodizel': 40.0}, which silently nulled the LPG offsets (they
+    // then resolved to 0.0). The constructor defaults above are the calibration.
   );
 }

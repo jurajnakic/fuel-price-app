@@ -151,10 +151,12 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
           final lastFetch = prefs.getString('oilapi_last_fetch');
           final now = DateTime.now();
 
-          // Only fetch every 2 days to conserve 50 req/month limit
+          // Free tier is 200 req/month as of 2026-07-24 (was 50), and we poll
+          // 2 distinct codes — daily costs ~60/month. 20h rather than 24h so a
+          // once-a-day app open always clears the throttle.
           if (lastFetch != null) {
             final last = DateTime.tryParse(lastFetch);
-            if (last != null && now.difference(last).inHours < 48) {
+            if (last != null && now.difference(last).inHours < 20) {
               _log('OilPriceAPI: skipping, last fetch ${now.difference(last).inHours}h ago');
               return [1.0]; // success — using cached data
             }
