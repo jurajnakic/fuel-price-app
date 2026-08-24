@@ -151,29 +151,59 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
           final lastFetch = prefs.getString('oilapi_last_fetch');
           final now = DateTime.now();
 
-          // Free tier is 200 req/month as of 2026-07-24 (was 50), and we poll
-          // 2 distinct codes — daily costs ~60/month. 20h rather than 24h so a
-          // once-a-day app open always clears the throttle.
+          // Rate limit is 50 requests per DAY (x-ratelimit-window: daily,
+          // verified 2026-08-24) — not 200/month as previously recorded. We
+          // poll 2 distinct codes, so a 4h throttle costs at most 12 req/day,
+          // well inside the limit.
+          //
+          // The throttle used to be 20h, which left exactly one attempt per
+          // day. Since the API has no free backfill (see fetchRecentPrices), a
+          // single failed attempt lost that day permanently, and GASOIL_USD
+          // coverage fell to 69% of business days while PROPANE_MONT_BELVIEU
+          // sat at 21%. Several attempts per day is the only defence.
+          const throttle = Duration(hours: 4);
           if (lastFetch != null) {
             final last = DateTime.tryParse(lastFetch);
-            if (last != null && now.difference(last).inHours < 20) {
-              _log('OilPriceAPI: skipping, last fetch ${now.difference(last).inHours}h ago');
+            if (last != null && now.difference(last) < throttle) {
+              final mins = now.difference(last).inMinutes;
+              _log('OilPriceAPI: skipping, last fetch ${mins}min ago');
               return [1.0]; // success — using cached data
             }
           }
 
           final symbols = _activeParams.oilApiSymbols.values.toSet();
+          var savedAny = false;
           for (final code in symbols) {
-            final price = await _oilPriceApiService.fetchLatestPrice(code);
-            if (price != null) {
-              await _priceRepo.saveOilPrice(
-                OilPrice(date: price.date, cifMed: price.value, source: code),
-              );
-              _log('OilPriceAPI: $code = ${price.value}');
+            // Prefer the multi-point endpoint; fall back to the single latest
+            // price so a change in the recent-prices payload cannot leave us
+            // with no data at all.
+            var points = OilPriceApiService.latestPerDay(
+              await _oilPriceApiService.fetchRecentPrices(code),
+            ).values.toList();
+            if (points.isEmpty) {
+              final single = await _oilPriceApiService.fetchLatestPrice(code);
+              if (single != null) points = [single];
             }
+
+            for (final p in points) {
+              await _priceRepo.saveOilPrice(
+                OilPrice(date: p.date, cifMed: p.value, source: code),
+              );
+            }
+            if (points.isNotEmpty) savedAny = true;
+            await _logger.log('oilapi',
+                '$code: saved ${points.length} day(s), '
+                'remaining=${_oilPriceApiService.remainingRequests}');
           }
 
-          await prefs.setString('oilapi_last_fetch', now.toIso8601String());
+          // Only start the throttle when something was actually stored.
+          // Persisting it unconditionally (the old behaviour) meant a network
+          // blip silently blocked the source for the rest of the window.
+          if (savedAny) {
+            await prefs.setString('oilapi_last_fetch', now.toIso8601String());
+          } else {
+            await _logger.log('oilapi', 'no data saved — throttle NOT started');
+          }
           return [1.0];
         },
       ),
