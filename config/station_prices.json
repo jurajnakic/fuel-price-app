@@ -1,13 +1,13 @@
 {
-  "updated": "2026-09-07",
-  "validity": "01.09.2026 - 08.09.2026",
+  "updated": "2026-09-08",
+  "validity": "",
   "source": "cijenegoriva.info + hak.hr",
   "stations": [
     {
       "id": "ina",
       "name": "INA",
       "url": "https://www.ina.hr",
-      "updated": "2026-09-07",
+      "updated": "2026-09-08",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -15,14 +15,9 @@
           "price": 1.67
         },
         {
-          "name": "Eurosuper 95 Premium",
-          "type": "es95_premium",
-          "price": 1.82
-        },
-        {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 2.21
+          "price": 2.23
         },
         {
           "name": "Eurodizel",
@@ -30,14 +25,9 @@
           "price": 1.79
         },
         {
-          "name": "Eurodizel Premium",
-          "type": "eurodizel_premium",
-          "price": 2.04
-        },
-        {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 0.74
+          "price": 0.78
         }
       ]
     },
@@ -45,45 +35,7 @@
       "id": "lukoil",
       "name": "Lukoil",
       "url": "https://www.lukoil.hr",
-      "updated": "2026-09-07",
-      "fuels": [
-        {
-          "name": "Eurosuper 95",
-          "type": "es95",
-          "price": 1.67
-        },
-        {
-          "name": "Eurosuper 95 Premium",
-          "type": "es95_premium",
-          "price": 1.83
-        },
-        {
-          "name": "Eurosuper 100",
-          "type": "es100",
-          "price": 2.22
-        },
-        {
-          "name": "Eurodizel",
-          "type": "eurodizel",
-          "price": 1.79
-        },
-        {
-          "name": "Eurodizel Premium",
-          "type": "eurodizel_premium",
-          "price": 1.95
-        },
-        {
-          "name": "Autoplin (LPG)",
-          "type": "lpg",
-          "price": 0.71
-        }
-      ]
-    },
-    {
-      "id": "petrol",
-      "name": "Petrol",
-      "url": "https://www.petrol.hr",
-      "updated": "2026-09-07",
+      "updated": "2026-09-08",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -101,44 +53,6 @@
           "price": 1.79
         },
         {
-          "name": "Eurodizel Premium",
-          "type": "eurodizel_premium",
-          "price": 2.07
-        },
-        {
-          "name": "Autoplin (LPG)",
-          "type": "lpg",
-          "price": 0.73
-        }
-      ]
-    },
-    {
-      "id": "shell",
-      "name": "Shell",
-      "url": "https://www.shell.hr",
-      "updated": "2026-09-07",
-      "fuels": [
-        {
-          "name": "Eurosuper 95",
-          "type": "es95",
-          "price": 1.67
-        },
-        {
-          "name": "Eurosuper 100",
-          "type": "es100",
-          "price": 2.3
-        },
-        {
-          "name": "Eurodizel",
-          "type": "eurodizel",
-          "price": 1.79
-        },
-        {
-          "name": "Eurodizel Premium",
-          "type": "eurodizel_premium",
-          "price": 2.12
-        },
-        {
           "name": "Autoplin (LPG)",
           "type": "lpg",
           "price": 0.75
@@ -146,10 +60,10 @@
       ]
     },
     {
-      "id": "tifon",
-      "name": "Tifon",
-      "url": "https://tifon.hr",
-      "updated": "2026-09-07",
+      "id": "petrol",
+      "name": "Petrol",
+      "url": "https://www.petrol.hr",
+      "updated": "2026-09-08",
       "fuels": [
         {
           "name": "Eurosuper 95",
@@ -159,7 +73,7 @@
         {
           "name": "Eurosuper 100",
           "type": "es100",
-          "price": 2.21
+          "price": 2.26
         },
         {
           "name": "Eurodizel",
@@ -169,7 +83,63 @@
         {
           "name": "Autoplin (LPG)",
           "type": "lpg",
-          "price": 0.71
+          "price": 0.78
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "name": "Shell",
+      "url": "https://www.shell.hr",
+      "updated": "2026-09-08",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.67
+        },
+        {
+          "name": "Eurosuper 100",
+          "type": "es100",
+          "price": 2.25
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.79
+        },
+        {
+          "name": "Autoplin (LPG)",
+          "type": "lpg",
+          "price": 0.74
+        }
+      ]
+    },
+    {
+      "id": "tifon",
+      "name": "Tifon",
+      "url": "https://tifon.hr",
+      "updated": "2026-09-08",
+      "fuels": [
+        {
+          "name": "Eurosuper 95",
+          "type": "es95",
+          "price": 1.67
+        },
+        {
+          "name": "Eurosuper 100",
+          "type": "es100",
+          "price": 2.23
+        },
+        {
+          "name": "Eurodizel",
+          "type": "eurodizel",
+          "price": 1.79
+        },
+        {
+          "name": "Autoplin (LPG)",
+          "type": "lpg",
+          "price": 0.75
         }
       ]
     }
