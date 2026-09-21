@@ -340,6 +340,9 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
 
     final refDate = DateTime.parse(_activeParams.referenceDate);
     final cycle = _activeParams.cycleDays;
+    // Averaging window, which since the weekly regime is shorter than the
+    // displayed cycle. See FuelParams.settlementWindowDays.
+    final windowDays = _activeParams.effectiveWindowDays;
     final now = DateTime.now();
     final nextChange = nextPriceChangeDate(now, refDate, cycle);
     // Current period started one cycle before the next change
@@ -390,7 +393,7 @@ class _FuelPriceAppState extends State<FuelPriceApp> {
         double? computePrice(List<OilPrice> prices, double factor, double offset, bool isCurrent, {int minPoints = 5}) {
           if (prices.isEmpty) return null;
           final anchor = isCurrent ? currentPeriodStart : nextChange;
-          final w = settlementWindow(anchor, cycle);
+          final w = settlementWindow(anchor, windowDays);
           final window = prices
               .where((p) => !p.date.isBefore(w.start) && p.date.isBefore(w.end))
               .toList();

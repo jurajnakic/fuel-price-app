@@ -140,8 +140,8 @@ void main() {
       expect(params.eiaCifMedFactors, isNotEmpty);
       expect(params.oilApiCifMedFactors, isNotEmpty);
       expect(params.sourceWeights, isNotEmpty);
-      expect(params.sourceWeights['eurodizel']!['yahoo'], 0.0);
-      expect(params.sourceWeights['eurodizel']!['oilapi'], 1.0);
+      expect(params.sourceWeights['eurodizel']!['yahoo'], 1.0);
+      expect(params.sourceWeights['eurodizel']!['oilapi'], 0.0);
     });
 
     test('fromJson parses EIA/OilAPI fields from JSON', () {
@@ -169,8 +169,8 @@ void main() {
       final p = FuelParams.defaultParams;
       expect(p.eiaSymbols['eurodizel'], 'EER_EPD2DXL0_PF4_Y35NY_DPG');
       expect(p.oilApiSymbols['eurodizel'], 'GASOIL_USD');
-      expect(p.sourceWeights['eurodizel']!['yahoo'], 0.0);
-      expect(p.sourceWeights['eurodizel']!['oilapi'], 1.0);
+      expect(p.sourceWeights['eurodizel']!['yahoo'], 1.0);
+      expect(p.sourceWeights['eurodizel']!['oilapi'], 0.0);
     });
 
     test('defaultParams has ES95 P18 LS fit (2026-09-21)', () {
@@ -179,6 +179,40 @@ void main() {
       expect(p.cifMedFactors['es100'], 216.724);
       expect(p.cifMedOffsets['es95'], 356.216);
       expect(p.cifMedOffsets['es100'], 356.216);
+    });
+
+    test('settlement window is decoupled from the display cycle', () {
+      // The government averages 7 days (weekly regime since 2026-08-18) while
+      // the app still shows a 14-day validity period. Feeding a 14-day average
+      // into coefficients fitted on 7 days cost diesel ~4c: on the 7-day window
+      // HO=F scores 0.8c, on the 14-day one 4.8c.
+      final p = FuelParams.defaultParams;
+      expect(p.cycleDays, 14, reason: 'display cycle unchanged');
+      expect(p.settlementWindowDays, 7, reason: 'averaging window follows the government');
+      expect(p.effectiveWindowDays, 7);
+    });
+
+    test('effectiveWindowDays falls back to cycleDays when unset', () {
+      const reg = RegulationInfo(
+        name: 'T', nnReference: 'NN 1/2025', effectiveDate: '2025-01-01',
+      );
+      const p = FuelParams(
+        version: 't', priceRegulation: reg, exciseRegulation: reg,
+        premiums: {}, exciseDuties: {}, density: {}, vatRate: 0.25,
+        cycleDays: 14,
+      );
+      expect(p.settlementWindowDays, isNull);
+      expect(p.effectiveWindowDays, 14);
+    });
+
+    test('fromJson reads settlement_window_days', () {
+      final p = FuelParams.fromJson({
+        ...(_baseJson()),
+        'price_cycle': {'reference_date': '2026-03-24', 'cycle_days': 14,
+                        'settlement_window_days': 7},
+      });
+      expect(p.cycleDays, 14);
+      expect(p.effectiveWindowDays, 7);
     });
 
     test('ES95 is off RB=F — RBOB decoupled from HR petrol in September', () {
@@ -191,14 +225,24 @@ void main() {
       expect(p.sourceWeights['es95']!['yahoo'], 1.0);
     });
 
-    test('defaultParams routes diesel and LPG through OilPriceAPI', () {
+    test('only LPG still routes through OilPriceAPI', () {
+      // Diesel moved to yahoo/HO=F on 2026-09-21 (0.8c vs GASOIL's 2.7c on the
+      // corrected 7-day window), so LPG is the only remaining OilPriceAPI
+      // consumer. GASOIL stays configured as the diesel fallback.
       final p = FuelParams.defaultParams;
-      for (final fuel in ['eurodizel', 'plavi_dizel', 'unp_10kg', 'unp_spremnik']) {
+      for (final fuel in ['unp_10kg', 'unp_spremnik']) {
         expect(p.sourceWeights[fuel]!['oilapi'], 1.0, reason: fuel);
         expect(p.oilApiSymbols[fuel], isNotNull, reason: fuel);
         expect(p.oilApiCifMedFactors[fuel], isNotNull, reason: fuel);
       }
-      expect(p.oilApiSymbols['eurodizel'], 'GASOIL_USD');
+      for (final fuel in ['eurodizel', 'plavi_dizel']) {
+        expect(p.sourceWeights[fuel]!['yahoo'], 1.0, reason: fuel);
+        expect(p.sourceWeights[fuel]!['oilapi'], 0.0, reason: fuel);
+        expect(p.yahooSymbols[fuel], 'HO=F', reason: fuel);
+        // Fallback must stay wired up, not deleted.
+        expect(p.oilApiSymbols[fuel], 'GASOIL_USD', reason: fuel);
+        expect(p.oilApiCifMedFactors[fuel], isNotNull, reason: fuel);
+      }
       expect(p.oilApiSymbols['unp_10kg'], 'PROPANE_MONT_BELVIEU_USD');
     });
 

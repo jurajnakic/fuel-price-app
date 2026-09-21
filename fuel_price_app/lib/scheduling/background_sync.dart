@@ -145,6 +145,7 @@ void callbackDispatcher() {
       final predictions = <FuelType, double>{};
       final refDate = DateTime.parse(params.referenceDate);
       final cycle = params.cycleDays;
+      final windowDays = params.effectiveWindowDays;
       final nextChange = nextPriceChangeDate(today, refDate, cycle);
       final currentPeriodStart = nextChange.subtract(Duration(days: cycle));
 
@@ -166,7 +167,7 @@ void callbackDispatcher() {
       // Filter prices to the NN 31/2025 settlement window (Mon-Sun × 2 ending
       // the Sunday before publication Monday).
       List<OilPrice> windowFilter(List<OilPrice> prices, DateTime anchor) {
-        final w = settlementWindow(anchor, cycle);
+        final w = settlementWindow(anchor, windowDays);
         return prices
             .where((p) => !p.date.isBefore(w.start) && p.date.isBefore(w.end))
             .toList();

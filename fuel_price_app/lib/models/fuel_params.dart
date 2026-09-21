@@ -31,7 +31,24 @@ class FuelParams {
   final Map<String, double> density;
   final double vatRate;
   final String referenceDate;
+
+  /// How long a published price stays valid — drives what the UI shows.
   final int cycleDays;
+
+  /// How many days of quotations go into the settlement average.
+  ///
+  /// Normally the same as [cycleDays], but the two came apart when the
+  /// government moved to weekly pricing on 2026-08-18: it now averages 7 days
+  /// while this app still presents a 14-day validity period. Feeding a 14-day
+  /// average into coefficients fitted on 7 days cost diesel about 4c — on the
+  /// 7-day window HO=F scores 0.8c, on the 14-day one 4.8c.
+  ///
+  /// Null means "follow [cycleDays]"; read it through [effectiveWindowDays].
+  final int? settlementWindowDays;
+
+  /// Days of quotations to average: [settlementWindowDays] when set, else
+  /// [cycleDays].
+  int get effectiveWindowDays => settlementWindowDays ?? cycleDays;
 
   /// Yahoo Finance symbol per fuel type for CIF Med approximation.
   /// Gasoline and diesel → Heating Oil (HO=F), LPG → Brent (BZ=F).
@@ -79,6 +96,7 @@ class FuelParams {
     required this.vatRate,
     this.referenceDate = '2026-03-24',
     this.cycleDays = 14,
+    this.settlementWindowDays,
     this.yahooSymbols = const {
       // ES95/ES100 moved off RB=F on 2026-09-21. RBOB decoupled from Croatian
       // petrol during September: P15-P18 errors ran -8/-16/-21/-15c, and in
@@ -184,11 +202,18 @@ class FuelParams {
       'unp_10kg': 314.655,
       'unp_spremnik': 164.641,
     },
+    // Diesel moved from oilapi/GASOIL to yahoo/HO=F on 2026-09-21, once the
+    // settlement window was corrected to 7 days. On that window HO=F scores
+    // 0.8c against GASOIL's 2.7c; on the old 14-day window the ranking was
+    // reversed (4.8c vs 4.3c), which is why this only made sense together with
+    // settlementWindowDays. HO=F also has 100% business-day coverage against
+    // GASOIL's 90%, and does not consume the OilPriceAPI quota.
+    // GASOIL stays configured as the fallback.
     this.sourceWeights = const {
       'es95': {'yahoo': 1.0},
       'es100': {'yahoo': 1.0},
-      'eurodizel': {'yahoo': 0.0, 'oilapi': 1.0},
-      'plavi_dizel': {'yahoo': 0.0, 'oilapi': 1.0},
+      'eurodizel': {'yahoo': 1.0, 'oilapi': 0.0},
+      'plavi_dizel': {'yahoo': 1.0, 'oilapi': 0.0},
       'unp_10kg': {'eia': 0.0, 'oilapi': 1.0},
       'unp_spremnik': {'eia': 0.0, 'oilapi': 1.0},
     },
@@ -207,8 +232,16 @@ class FuelParams {
       referenceDate = '2026-03-24';
     }
     final int rawCycleDays = (priceCycle?['cycle_days'] as num?)?.toInt() ?? 14;
+    final int? rawWindowDays =
+        (priceCycle?['settlement_window_days'] as num?)?.toInt();
     final int cycleDays =
         (rawCycleDays > 0 && rawCycleDays % 7 == 0) ? rawCycleDays : 14;
+    // An invalid window falls back to null, i.e. "follow cycleDays", rather
+    // than to a hardcoded 14 that could silently contradict the cycle.
+    final int? windowDays =
+        (rawWindowDays != null && rawWindowDays > 0 && rawWindowDays % 7 == 0)
+            ? rawWindowDays
+            : null;
 
     return FuelParams(
       version: json['version'] as String,
@@ -225,6 +258,7 @@ class FuelParams {
       vatRate: (json['vat_rate'] as num).toDouble(),
       referenceDate: referenceDate,
       cycleDays: cycleDays,
+      settlementWindowDays: windowDays,
       yahooSymbols: json.containsKey('yahoo_symbols')
           ? (json['yahoo_symbols'] as Map<String, dynamic>)
               .map((k, v) => MapEntry(k, v as String))
@@ -281,7 +315,7 @@ class FuelParams {
   }
 
   static const defaultParams = FuelParams(
-    version: '2026-09-21.1',
+    version: '2026-09-21.2',
     priceRegulation: RegulationInfo(
       name: 'Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata',
       nnReference: 'NN 31/2025',
@@ -319,6 +353,8 @@ class FuelParams {
     vatRate: 0.25,
     referenceDate: '2026-03-24',
     cycleDays: 14,
+    // Government averages 7 days since 2026-08-18; display stays 14-day.
+    settlementWindowDays: 7,
     // NB: do not re-add an oilApiCifMedOffsets override here. It used to carry
     // only {'eurodizel': 40.0}, which silently nulled the LPG offsets (they
     // then resolved to 0.0). The constructor defaults above are the calibration.
