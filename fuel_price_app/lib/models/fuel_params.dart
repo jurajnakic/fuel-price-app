@@ -86,6 +86,20 @@ class FuelParams {
   /// Sources: "yahoo", "eia", "oilapi". Normalized at runtime.
   final Map<String, Map<String, double>> sourceWeights;
 
+  /// API keys come from --dart-define so they stay out of a public repo.
+  ///
+  /// Build with:
+  ///   flutter build apk --debug --dart-define-from-file=dart_defines.json
+  ///
+  /// dart_defines.json is gitignored; dart_defines.example.json shows the
+  /// shape. An empty key is not fatal — the app keeps working on Yahoo data
+  /// (which needs no key) and only the EIA/OilPriceAPI fetches fail, which is
+  /// exactly what the logs will show.
+  static const String _eiaKeyFromEnv =
+      String.fromEnvironment('EIA_API_KEY');
+  static const String _oilPriceKeyFromEnv =
+      String.fromEnvironment('OIL_PRICE_API_KEY');
+
   const FuelParams({
     required this.version,
     required this.priceRegulation,
@@ -141,11 +155,10 @@ class FuelParams {
       'unp_10kg': 23.029,
       'unp_spremnik': -120.325,
     },
-    this.eiaApiKey = 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
-    // Key rotated 2026-07-24. Free tier is 50 requests per DAY
-    // (x-ratelimit-window: daily, verified 2026-08-24) — an earlier note here
-    // claimed 200/month, which was wrong.
-    this.oilPriceApiKey = '79fb860081d26b9db83855f5d12beb9cd0d83392ac6b44ab23416600237c58c7',
+    this.eiaApiKey = _eiaKeyFromEnv,
+    // Free tier is 50 requests per DAY (x-ratelimit-window: daily, verified
+    // 2026-08-24) — an earlier note here claimed 200/month, which was wrong.
+    this.oilPriceApiKey = _oilPriceKeyFromEnv,
     this.eiaSymbols = const {
       'es95': 'EER_EPMRU_PF4_Y35NY_DPG',
       'es100': 'EER_EPMRU_PF4_Y35NY_DPG',

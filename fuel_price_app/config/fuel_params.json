@@ -46,8 +46,8 @@
     "eurodizel": 327.0,
     "unp_10kg": 16.0
   },
-  "eia_api_key": "REPLACE_WITH_REAL_KEY",
-  "oil_price_api_key": "REPLACE_WITH_REAL_KEY",
+  "eia_api_key": "",
+  "oil_price_api_key": "",
   "eia_symbols": {
     "es95": "EER_EPMRU_PF4_Y35NY_DPG",
     "es100": "EER_EPMRU_PF4_Y35NY_DPG",

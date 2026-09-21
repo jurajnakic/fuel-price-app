@@ -1,0 +1,4 @@
+{
+  "EIA_API_KEY": "<EIA kljuc — besplatan, https://www.eia.gov/opendata/register.php>",
+  "OIL_PRICE_API_KEY": "<OilPriceAPI kljuc — free tier 50 req/dan, https://oilpriceapi.com>"
+}

@@ -63,8 +63,8 @@
     "unp_10kg": 12.5,
     "unp_spremnik": 12.5
   },
-  "eia_api_key": "TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h",
-  "oil_price_api_key": "79fb860081d26b9db83855f5d12beb9cd0d83392ac6b44ab23416600237c58c7",
+  "eia_api_key": "",
+  "oil_price_api_key": "",
   "eia_symbols": {
     "es95": "EER_EPMRU_PF4_Y35NY_DPG",
     "es100": "EER_EPMRU_PF4_Y35NY_DPG",
