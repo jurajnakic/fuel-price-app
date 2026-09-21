@@ -173,12 +173,22 @@ void main() {
       expect(p.sourceWeights['eurodizel']!['oilapi'], 1.0);
     });
 
-    test('defaultParams has ES95 P10 LS fit (2026-07-24)', () {
+    test('defaultParams has ES95 P18 LS fit (2026-09-21)', () {
       final p = FuelParams.defaultParams;
-      expect(p.cifMedFactors['es95'], 383.647);
-      expect(p.cifMedFactors['es100'], 383.647);
-      expect(p.cifMedOffsets['es95'], -57.679);
-      expect(p.cifMedOffsets['es100'], -57.679);
+      expect(p.cifMedFactors['es95'], 216.724);
+      expect(p.cifMedFactors['es100'], 216.724);
+      expect(p.cifMedOffsets['es95'], 356.216);
+      expect(p.cifMedOffsets['es100'], 356.216);
+    });
+
+    test('ES95 is off RB=F — RBOB decoupled from HR petrol in September', () {
+      // P15-P18 errors on RB=F ran -8/-16/-21/-15c; walk-forward scored it at
+      // 11.5c against HO=F at 2.5c. If anything moves ES95 back to RBOB, this
+      // fails loudly rather than quietly costing 10c a period.
+      final p = FuelParams.defaultParams;
+      expect(p.yahooSymbols['es95'], 'HO=F');
+      expect(p.yahooSymbols['es100'], 'HO=F');
+      expect(p.sourceWeights['es95']!['yahoo'], 1.0);
     });
 
     test('defaultParams routes diesel and LPG through OilPriceAPI', () {
@@ -192,20 +202,35 @@ void main() {
       expect(p.oilApiSymbols['unp_10kg'], 'PROPANE_MONT_BELVIEU_USD');
     });
 
-    test('defaultParams has GASOIL P10 LS fit for diesel', () {
+    test('defaultParams has GASOIL P18 LS fit for diesel', () {
       final p = FuelParams.defaultParams;
-      expect(p.oilApiCifMedFactors['eurodizel'], 0.8708);
-      expect(p.oilApiCifMedOffsets['eurodizel'], 229.789);
-      expect(p.oilApiCifMedFactors['plavi_dizel'], 0.9765);
-      expect(p.oilApiCifMedOffsets['plavi_dizel'], 48.104);
+      expect(p.oilApiCifMedFactors['eurodizel'], 1.1003);
+      expect(p.oilApiCifMedOffsets['eurodizel'], 0.125);
+      expect(p.oilApiCifMedFactors['plavi_dizel'], 1.1290);
+      expect(p.oilApiCifMedOffsets['plavi_dizel'], -99.888);
     });
 
-    test('defaultParams has Mont Belvieu P10 LS fit for LPG', () {
+    test('defaultParams has Mont Belvieu P18 LS fit for LPG', () {
       final p = FuelParams.defaultParams;
-      expect(p.oilApiCifMedFactors['unp_10kg'], 1166.446);
-      expect(p.oilApiCifMedOffsets['unp_10kg'], 50.643);
-      expect(p.oilApiCifMedFactors['unp_spremnik'], 1076.654);
-      expect(p.oilApiCifMedOffsets['unp_spremnik'], -34.083);
+      expect(p.oilApiCifMedFactors['unp_10kg'], 879.661);
+      expect(p.oilApiCifMedOffsets['unp_10kg'], 314.655);
+      expect(p.oilApiCifMedFactors['unp_spremnik'], 875.159);
+      expect(p.oilApiCifMedOffsets['unp_spremnik'], 164.641);
+    });
+
+    test('every fuel has a fitted Yahoo fallback, not a placeholder', () {
+      // The LPG pair used to carry a bare 16.2 / 12.5 that was never a fit.
+      // PriceBlender silently falls back to equal weights across whatever has
+      // data, so a placeholder here is a latent wrong prediction.
+      final p = FuelParams.defaultParams;
+      for (final fuel in ['es95', 'es100', 'eurodizel', 'plavi_dizel',
+                          'unp_10kg', 'unp_spremnik']) {
+        expect(p.cifMedFactors[fuel], isNotNull, reason: fuel);
+        expect(p.cifMedOffsets[fuel], isNotNull, reason: fuel);
+        expect(p.yahooSymbols[fuel], isNotNull, reason: fuel);
+      }
+      expect(p.cifMedFactors['unp_10kg'], isNot(16.2));
+      expect(p.cifMedOffsets['unp_10kg'], isNot(12.5));
     });
 
     test('LPG fallback coefficients are no longer a constant predictor', () {
@@ -225,7 +250,7 @@ void main() {
 
     test('defaultParams has oilApiCifMedOffsets for every OilAPI fuel', () {
       final p = FuelParams.defaultParams;
-      expect(p.oilApiCifMedOffsets['eurodizel'], 229.789);
+      expect(p.oilApiCifMedOffsets['eurodizel'], 0.125);
       // Regression: defaultParams used to override this map with just
       // {'eurodizel': 40.0}, nulling the LPG offsets.
       for (final fuel in p.oilApiSymbols.keys) {
@@ -242,7 +267,7 @@ void main() {
 
     test('fromJson uses default oilApiCifMedOffsets when missing', () {
       final params = FuelParams.fromJson(_baseJson());
-      expect(params.oilApiCifMedOffsets['eurodizel'], 229.789);
+      expect(params.oilApiCifMedOffsets['eurodizel'], 0.125);
     });
   });
 }

@@ -34,7 +34,7 @@ class FuelParams {
   final int cycleDays;
 
   /// Yahoo Finance symbol per fuel type for CIF Med approximation.
-  /// Gasoline → RBOB (RB=F), Diesel → Heating Oil (HO=F), LPG → Brent (BZ=F).
+  /// Gasoline and diesel → Heating Oil (HO=F), LPG → Brent (BZ=F).
   final Map<String, String> yahooSymbols;
 
   /// Conversion: cifMed = raw × factor + offset (USD/tonne).
@@ -80,42 +80,53 @@ class FuelParams {
     this.referenceDate = '2026-03-24',
     this.cycleDays = 14,
     this.yahooSymbols = const {
-      'es95': 'RB=F',
-      'es100': 'RB=F',
-      'eurodizel': 'BZ=F',
-      'plavi_dizel': 'BZ=F',
+      // ES95/ES100 moved off RB=F on 2026-09-21. RBOB decoupled from Croatian
+      // petrol during September: P15-P18 errors ran -8/-16/-21/-15c, and in
+      // P17->P18 RB=F rose 7.2% while ES95 rose 1.0%. Walk-forward hold-out
+      // (holdout_p18.py) scored RB=F at 11.5c against HO=F at 2.5c.
+      // Heating oil for petrol reads odd, but Croatian ex-measure prices track
+      // distillates (r=0.94) far better than RBOB (r=0.65).
+      'es95': 'HO=F',
+      'es100': 'HO=F',
+      // Diesel's Yahoo entry is a fallback only (oilapi/GASOIL carries weight
+      // 1.0). Moved off Brent for the same reason it stopped being primary in
+      // July: BZ=F scores 18.8c walk-forward here, HO=F 1.0c.
+      'eurodizel': 'HO=F',
+      'plavi_dizel': 'HO=F',
+      // LPG has no usable Yahoo proxy; Brent stays only so the blender's
+      // equal-weight fallback branch has something non-absurd to use.
       'unp_10kg': 'BZ=F',
       'unp_spremnik': 'BZ=F',
     },
-    // P10 LS fit (2026-07-24, fit_p10.py): refit on P1-P10 using prod-matched
-    // settlement window (half-open [start, end), per-date HNB rate, available
-    // trading days only).
+    // P18 LS fit (2026-09-21, pick_p18.py): refit on P1-P18 using the
+    // prod-matched settlement window (half-open [start, end), per-date HNB
+    // rate, available trading days only, 7-day window from P13 onward since
+    // the government moved to weekly pricing on 2026-08-18).
     //
-    // Yahoo (Brent/RBOB) is no longer the primary source for diesel or LPG —
-    // see sourceWeights below. These coefficients remain because PriceBlender
-    // falls back to equal weights across whatever sources have data when the
-    // weighted source is missing, so they must not be stale.
-    //   ES95/ES100: fit on P5-P10 (regime shift — the P1-P5 fit drifted to
-    //     +4/+9/+6c on P8-P10). Errors on P5-P10: 0/+1/-2/-1/+2/-1c.
-    //   Eurodizel/plavi: best Brent fit (P5-P10), ~4c. GASOIL does 2c.
+    // Yahoo coefficients. For ES95/ES100 these are PRIMARY (weight 1.0) and
+    // now sit on HO=F; for diesel they are the fallback, also on HO=F. The LPG
+    // pair stays on BZ=F and is fitted rather than guessed — it used to be a
+    // bare 16.2/12.5, which was never a fit at all.
     this.cifMedFactors = const {
-      'es95': 383.647,
-      'es100': 383.647,
-      'eurodizel': 8.276,
-      'plavi_dizel': 9.197,
-      'unp_10kg': 16.2,
-      'unp_spremnik': 16.2,
+      'es95': 216.724,
+      'es100': 216.724,
+      'eurodizel': 317.330,
+      'plavi_dizel': 320.348,
+      'unp_10kg': 11.521,
+      'unp_spremnik': 11.411,
     },
     this.cifMedOffsets = const {
-      'es95': -57.679,
-      'es100': -57.679,
-      'eurodizel': 429.433,
-      'plavi_dizel': 279.678,
-      'unp_10kg': 12.5,
-      'unp_spremnik': 12.5,
+      'es95': 356.216,
+      'es100': 356.216,
+      'eurodizel': 73.304,
+      'plavi_dizel': 1.902,
+      'unp_10kg': 23.029,
+      'unp_spremnik': -120.325,
     },
     this.eiaApiKey = 'TMDb4mZNHr7DIUP3ti975TA66BlYWf2aQFhkZc5h',
-    // Key rotated 2026-07-24; free tier is now 200 req/month (was 50).
+    // Key rotated 2026-07-24. Free tier is 50 requests per DAY
+    // (x-ratelimit-window: daily, verified 2026-08-24) — an earlier note here
+    // claimed 200/month, which was wrong.
     this.oilPriceApiKey = '79fb860081d26b9db83855f5d12beb9cd0d83392ac6b44ab23416600237c58c7',
     this.eiaSymbols = const {
       'es95': 'EER_EPMRU_PF4_Y35NY_DPG',
@@ -131,43 +142,47 @@ class FuelParams {
       'unp_10kg': 'PROPANE_MONT_BELVIEU_USD',
       'unp_spremnik': 'PROPANE_MONT_BELVIEU_USD',
     },
+    // EIA fallbacks, all refit on P1-P18 (2026-09-21). These are never the
+    // weighted source, but PriceBlender falls back to equal weights across
+    // whatever has data, so stale values here get used silently.
     this.eiaCifMedFactors = const {
-      'es95': 366.0,
-      'es100': 366.0,
-      'eurodizel': 303.0,
-      'plavi_dizel': 303.0,
-      // EIA propane is the fallback for LPG, not the primary source. The old
-      // constant predictor (factor=0) drifted to +65c by P10 as HR LPG kept
-      // falling; this is the P7-P10 fit, which at least has the right sign.
-      'unp_10kg': 1374.335,
-      'unp_spremnik': 1270.884,
+      'es95': 334.867,
+      'es100': 334.867,
+      'eurodizel': 311.455,
+      'plavi_dizel': 314.905,
+      // EIA propane remains poor for Croatian LPG (13.7c even refit) — Mont
+      // Belvieu is the real source. Kept only so the fallback branch is sane.
+      'unp_10kg': 335.162,
+      'unp_spremnik': 305.970,
     },
     this.eiaCifMedOffsets = const {
-      'es95': 70.0,
-      'es100': 70.0,
-      'eurodizel': 105.0,
-      'plavi_dizel': 105.0,
-      'unp_10kg': -101.940,
-      'unp_spremnik': -176.761,
+      'es95': 157.006,
+      'es100': 157.006,
+      'eurodizel': 83.009,
+      'plavi_dizel': 9.704,
+      'unp_10kg': 854.098,
+      'unp_spremnik': 722.211,
     },
-    // Primary source for diesel and LPG as of 2026-07-24.
-    //   GASOIL_USD (ICE Rotterdam), fit on P5-P10: eurodizel MAE 2.0c,
-    //     plavi 2.3c. Factor is stable across fit windows (0.871 vs 0.846),
-    //     so this is a real relationship, not an overfit.
-    //   PROPANE_MONT_BELVIEU_USD, fit on P7-P10: MAE 4.0c. Fitted on the
-    //     recent window only because Mont Belvieu has just 2-3 points per
-    //     14-day window and the earliest ones are noise.
+    // Primary source for diesel and LPG; refit 2026-09-21 on P1-P18 (pick_p18.py).
+    //   GASOIL_USD (ICE Rotterdam) — walk-forward 3.3c / 2.8c, still clearly
+    //     the right source. Factor moved 0.87 -> 1.10 because the July fit was
+    //     made when GASOIL coverage was 69% of business days; after the
+    //     collection fix it is 90%, so the average it feeds on is no longer
+    //     biased by missing days.
+    //   PROPANE_MONT_BELVIEU_USD — walk-forward 3.5c / 3.8c. Fitted on P11-P18
+    //     only: Mont Belvieu starts 2026-04-22 and its earliest points are
+    //     sparse noise (they caused the -34c misses on P5/P6).
     this.oilApiCifMedFactors = const {
-      'eurodizel': 0.8708,
-      'plavi_dizel': 0.9765,
-      'unp_10kg': 1166.446,
-      'unp_spremnik': 1076.654,
+      'eurodizel': 1.1003,
+      'plavi_dizel': 1.1290,
+      'unp_10kg': 879.661,
+      'unp_spremnik': 875.159,
     },
     this.oilApiCifMedOffsets = const {
-      'eurodizel': 229.789,
-      'plavi_dizel': 48.104,
-      'unp_10kg': 50.643,
-      'unp_spremnik': -34.083,
+      'eurodizel': 0.125,
+      'plavi_dizel': -99.888,
+      'unp_10kg': 314.655,
+      'unp_spremnik': 164.641,
     },
     this.sourceWeights = const {
       'es95': {'yahoo': 1.0},
@@ -266,7 +281,7 @@ class FuelParams {
   }
 
   static const defaultParams = FuelParams(
-    version: '2026-07-24.1',
+    version: '2026-09-21.1',
     priceRegulation: RegulationInfo(
       name: 'Uredba o utvrđivanju najviših maloprodajnih cijena naftnih derivata',
       nnReference: 'NN 31/2025',
